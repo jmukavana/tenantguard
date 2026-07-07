@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tenantguard"
+version = "0.1.0"
+description = "Python reference implementation of the TenantGuard core (see core/spec.md)."
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+# The core has no runtime dependencies. opentelemetry-api joins later, with propagation.
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[tool.setuptools.packages.find]
+include = ["tenantguard*"]
+
+[tool.pytest.ini_options]
+# Put the project root on sys.path so `import tenantguard` works without installing.
+pythonpath = ["."]
+testpaths = ["tests"]

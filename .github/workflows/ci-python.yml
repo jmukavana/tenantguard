@@ -1,0 +1,20 @@
+name: CI - Python
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pytest
+      # The conformance harness reads testkit/compliance-tests/fixtures, which the full
+      # checkout provides; _fixtures.fixtures_dir() walks up from python/ to find it.
+      - run: cd python && python -m pytest -q
