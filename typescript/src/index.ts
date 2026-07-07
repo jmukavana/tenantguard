@@ -16,3 +16,9 @@ export {
   SubdomainResolver,
 } from "./resolver/index.js";
 export type { HttpRequestView, TenantResolver } from "./resolver/index.js";
+
+export { IsolationError, SchemaStrategy, UNSAFE_TENANT_ID } from "./isolation/index.js";
+export type { QueryRunner } from "./isolation/index.js";
+
+export { LoggingAuditHook, TenantEvent } from "./audit/index.js";
+export type { AuditHook, Outcome, TenantEventInit } from "./audit/index.js";

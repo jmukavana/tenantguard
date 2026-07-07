@@ -60,15 +60,16 @@ first, then port). What is real today:
   pytest harness passes **all 6** shared fixture groups. `cd python && python -m pytest -q`
   green (needs `pip install pytest opentelemetry-api`); CI wired (`ci-python.yml`).
 
-- **TypeScript, Rings 0–1** under `typescript/` (`@tenantguard/core`, ESM, Node ≥18): immutable
-  `TenantContext` (a class frozen via `Object.freeze`, with a frozen defensive copy of
-  metadata); `resolver.HeaderResolver` + `SubdomainResolver` over an `HttpRequestView`
-  interface (returning `null` for `no_tenant`); `TenantContextError` carries the same symbolic
-  codes. A Vitest conformance harness (`typescript/test/`) reads the shared `tenant-context` +
-  `resolver-*` fixtures. `cd typescript && npm ci && npm test` green (also `npm run typecheck`).
-  Core has no runtime deps (TypeScript/Vitest are dev-only); CI wired (`ci-typescript.yml`).
-  Ring 2+ not built yet. Relative imports use `.js` extensions (NodeNext ESM); Vitest resolves
-  them to `.ts`.
+- **TypeScript, Rings 0–2** under `typescript/` (`@tenantguard/core`, ESM, Node ≥18): immutable
+  `TenantContext` (`Object.freeze`d class + frozen metadata copy); `resolver.HeaderResolver` +
+  `SubdomainResolver` over an `HttpRequestView` interface (returning `null` for `no_tenant`);
+  `isolation.SchemaStrategy` (schema naming + injection rejection, `bind` via a `QueryRunner`
+  interface); `audit.TenantEvent` (`toJson` via `JSON.stringify` in canonical field order) +
+  `AuditHook`/`LoggingAuditHook`. Errors carry the same symbolic codes. The Vitest harness
+  passes 5 of 6 shared fixture groups (all but propagation). `cd typescript && npm ci && npm test`
+  green (also `npm run typecheck`). Core has no runtime deps (TypeScript/Vitest are dev-only);
+  CI wired (`ci-typescript.yml`). Propagation not built yet. Relative imports use `.js`
+  extensions (NodeNext ESM); Vitest resolves them to `.ts`.
 
 Most `docs/` and `core/hooks/` files are still empty placeholders.
 
