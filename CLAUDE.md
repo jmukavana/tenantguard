@@ -83,8 +83,12 @@ first, then port). What is real today:
   languages** — `sign`/`verify`/`canonicalJson` sit beside each `TenantEvent` (Go
   `audit.Sign`; Java `audit.Signing`; Python `tenantguard.audit.sign`; TS `audit` module),
   stdlib-only, each proven against the golden vectors by its conformance harness (canonical
-  bytes and HMAC checked separately). Still to come: the `AuditForgeHook` HTTP client and the
-  ingestion service (AuditForge will dogfood TenantGuard for its own multitenancy).
+  bytes and HMAC checked separately). The **Go delivery client** is built too —
+  `auditforge.Hook` (`go/tenantguard/audit/auditforge/`), an `audit.Hook` that signs each
+  event and POSTs a one-event `IngestRequest` to `/v1/events` (idempotent on `duplicate`,
+  errors on `rejected`/unacknowledged, retries 5xx + network errors with backoff; tested
+  against a fake AuditForge that verifies the signature). Still to come: the Java/Python/TS
+  delivery clients and the ingestion service (AuditForge will dogfood TenantGuard).
 
 Most `docs/` and `core/hooks/` files are still empty placeholders.
 

@@ -38,7 +38,10 @@ Turn the deferred Ring-5 `AuditHook` stub into a real signer in each TenantGuard
   harness proves both golden vectors (canonical bytes and HMAC checked separately). Every
   signer is stdlib-only (HMAC-SHA256 + hex).
 - an `AuditForgeHook implements AuditHook` that signs each event and POSTs an `IngestRequest`
-  to `/v1/events`, with retry/backoff and the `keyId` header. **(next)**
+  to `/v1/events`, with retry/backoff and the `keyId`. **Go done** — `auditforge.Hook`
+  (`go/tenantguard/audit/auditforge/`): signs, POSTs a one-event batch, treats a `duplicate`
+  ack as idempotent success and a `rejected`/unacknowledged event as an error, retries 5xx and
+  network errors (not 4xx) with exponential backoff. Java/Python/TS next.
 - Start in Go (reference), then Java/Python/TS. Each only needs an HMAC primitive + an HTTP
   client — both in every standard library.
 
@@ -60,6 +63,7 @@ Turn the deferred Ring-5 `AuditHook` stub into a real signer in each TenantGuard
 1. ~~Add a `sign()` + `auditforge-signing.json` conformance test to the Go audit package
    (proves the golden vectors against real code).~~ **Done** — `audit.Sign`/`Verify`/
    `CanonicalJSON` + `TestAuditForgeSigningFixtures`.
-2. Implement `AuditForgeHook` (Go) that signs + POSTs an `IngestRequest`.
+2. ~~Implement `AuditForgeHook` (Go) that signs + POSTs an `IngestRequest`.~~ **Done** —
+   `auditforge.Hook`, tested against a fake AuditForge that verifies each signature.
 3. Stand up the Go ingestion service skeleton with signature verification, tested against the
    same golden vectors from the verifier's side.
