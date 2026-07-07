@@ -46,7 +46,7 @@ Turn the deferred Ring-5 `AuditHook` stub into a real signer in each TenantGuard
   exponential backoff. Every client is stdlib-only (HMAC + an HTTP client) and is tested
   against an in-process fake AuditForge that verifies the signature it receives.
 
-### Phase C — Ingestion service (Go) — in progress
+### Phase C — Ingestion service (Go) — done
 The service lives in its own module, `github.com/tenantguard/auditforge` under
 `ecosystem/auditforge/`, importing TenantGuard (local `replace`). Structure:
 `keyring` (keyId→secret), `store` (the `Store` seam + a `Memory` implementation), `ingest`
@@ -59,10 +59,13 @@ The service lives in its own module, `github.com/tenantguard/auditforge` under
 - `GET /v1/events`: **done** — tenant resolved from the request by TenantGuard's
   `HeaderResolver` (dogfooding), results isolated to that tenant; `from`/`to` RFC 3339 bounds.
   End-to-end `httptest` proves tenant A cannot read tenant B's events.
-- **Remaining gate:** swap the `Memory` store for a Postgres, schema-isolated backend using
-  TenantGuard's `SchemaStrategy`, proven by a real-Postgres integration test (the
-  testcontainers pattern already used) — one event stored once, idempotent on redelivery,
-  isolation enforced at the database.
+- **Gate met:** `store.Postgres` is a schema-isolated backend — each tenant's events live in
+  their own schema (`SchemaStrategy`), stored as `jsonb` with an `event_id` PRIMARY KEY for
+  idempotency and bound per query so isolation is enforced by the database. A real-Postgres
+  integration test (skips unless `TENANTGUARD_POSTGRES_DSN` is set) proves an event is stored
+  once, idempotent on redelivery, time-bounded on query, and that tenant A's query never
+  resolves tenant B's events. The service composes over any `Store`, so `cmd/auditforged` can
+  swap `Memory` for `Postgres` unchanged.
 
 ### Phase D — Tamper-evidence & retention
 - Per-tenant hash chaining (`hash = SHA-256(prevHash || canonical)`), a chain-verify endpoint,

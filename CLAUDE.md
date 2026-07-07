@@ -99,9 +99,14 @@ first, then port). What is real today:
   `audit.Verify` (dogfooding the byte-identical canonical form), rejects
   unknown-key/malformed/bad-signature per event (batch still 200), is idempotent by `eventId`,
   and resolves the query tenant via `HeaderResolver` so `GET` is tenant-isolated — all proven
-  against the golden vectors and by an `httptest` isolation test. `cd ecosystem/auditforge &&
-  go test ./...` green. Remaining: the Postgres, schema-isolated `Store` (using
-  `SchemaStrategy`) with a real-Postgres integration test.
+  against the golden vectors and by an `httptest` isolation test. The **Postgres, schema-
+  isolated `Store`** (`store.Postgres`) is built too: per-tenant schema via `SchemaStrategy`,
+  events as `jsonb` with `event_id` PRIMARY KEY (idempotency), proven by a real-Postgres
+  integration test (`store/postgres_integration_test.go`, skips unless
+  `TENANTGUARD_POSTGRES_DSN` is set) that shows store-once/idempotent-redelivery/time-bounds
+  and database-enforced cross-tenant isolation. `cd ecosystem/auditforge && go test ./...`
+  green (integration test needs `lib/pq`, the module's one non-TenantGuard dep). Next (Phase
+  D): per-tenant hash chaining for tamper-evidence and retention windows.
 
 Most `docs/` and `core/hooks/` files are still empty placeholders.
 
