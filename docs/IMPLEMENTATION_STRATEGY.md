@@ -102,11 +102,12 @@ that ecosystem's idiomatic adapters. Wire the already-present per-language CI wo
   interoperable W3C Baggage. CI wired (`ci-java.yml`). Next: the servlet/Spring middleware +
   JPA/JDBC adapters, then the multi-module split (a later refactor of the flat project).
   Deferred like Go: JWT-claim resolver, Database-per-Tenant.
-- Python: **Rings 0–1 done** — `pyproject.toml` (3.10+); immutable `TenantContext` (frozen
-  dataclass, read-only `MappingProxyType` metadata); `HeaderResolver` + `SubdomainResolver`
-  over an `HttpRequestView` Protocol; pytest conformance harness passing `tenant-context` +
-  both resolver fixtures; CI wired (`ci-python.yml`). Next: Ring 2, then FastAPI/Starlette,
-  SQLAlchemy, `opentelemetry-python`.
+- Python: **Rings 0–2 done** — `pyproject.toml` (3.10+); immutable `TenantContext`; both
+  resolvers over an `HttpRequestView` Protocol; `SchemaStrategy` (naming + injection
+  rejection, DB-API `bind`) and `TenantEvent` (`to_json` via stdlib `json`). The pytest
+  harness passes 5 of 6 shared fixture groups (all but propagation); CI wired
+  (`ci-python.yml`). Next: propagation (`opentelemetry-python`), then FastAPI/Starlette,
+  SQLAlchemy.
 - TypeScript: `package.json`, Express, `@opentelemetry/*`, Zod, Vitest.
 
 ### Phase 5 — Ecosystem edges
