@@ -79,10 +79,12 @@ first, then port). What is real today:
   storage), `schemas/IngestRequest|IngestAck.schema.json`, and HMAC-SHA256 signing **golden
   vectors** in `testkit/compliance-tests/fixtures/auditforge-signing.json` (canonical form =
   `TenantEvent.toJson()` of the unsigned event; verified with `openssl`). Build-out plan in
-  `docs/auditforge-strategy.md`. Phase B underway: the **Go signing client** lands in the
-  `audit` package (`Sign`/`Verify`/`CanonicalJSON`), proven against the golden vectors. Still
-  to come: the `AuditForgeHook` HTTP client, the Java/Python/TS signers, and the ingestion
-  service (AuditForge will dogfood TenantGuard for its own multitenancy).
+  `docs/auditforge-strategy.md`. Phase B underway: the **signing client is ported to all four
+  languages** — `sign`/`verify`/`canonicalJson` sit beside each `TenantEvent` (Go
+  `audit.Sign`; Java `audit.Signing`; Python `tenantguard.audit.sign`; TS `audit` module),
+  stdlib-only, each proven against the golden vectors by its conformance harness (canonical
+  bytes and HMAC checked separately). Still to come: the `AuditForgeHook` HTTP client and the
+  ingestion service (AuditForge will dogfood TenantGuard for its own multitenancy).
 
 Most `docs/` and `core/hooks/` files are still empty placeholders.
 

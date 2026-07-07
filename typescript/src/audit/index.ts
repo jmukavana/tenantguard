@@ -1,7 +1,7 @@
 /**
  * Tenant audit events and hooks (core/spec.md, Observability & Audit).
  */
-import { randomBytes } from "node:crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 /** The result of an audited operation, as it appears on the wire. */
 export type Outcome = "allowed" | "denied" | "error";
@@ -95,6 +95,42 @@ export class LoggingAuditHook implements AuditHook {
   publish(event: TenantEvent): void {
     console.info("tenant.audit", event.toJson());
   }
+}
+
+/**
+ * Return the exact bytes that are signed for `event`: its canonical JSON with any signature
+ * cleared, so a stale signature never feeds back into the signed form
+ * (ecosystem/auditforge/spec.md, "The signing contract").
+ */
+export function canonicalJson(event: TenantEvent): string {
+  if (!event.signature) return event.toJson();
+  const unsigned = new TenantEvent({
+    eventId: event.eventId,
+    eventType: event.eventType,
+    tenantId: event.tenantId,
+    timestamp: event.timestamp,
+    outcome: event.outcome,
+    traceId: event.traceId,
+    actor: event.actor,
+    resource: event.resource,
+    metadata: event.metadata,
+  });
+  return unsigned.toJson();
+}
+
+/** Return the lowercase-hex HMAC-SHA256 of `event`'s canonical form under `secret`. */
+export function sign(event: TenantEvent, secret: string | Buffer): string {
+  return createHmac("sha256", secret).update(canonicalJson(event), "utf8").digest("hex");
+}
+
+/**
+ * Report whether `signature` is a valid HMAC-SHA256 over `event`'s canonical form under
+ * `secret`. The comparison is constant-time.
+ */
+export function verify(event: TenantEvent, secret: string | Buffer, signature: string): boolean {
+  const expected = Buffer.from(sign(event, secret), "utf8");
+  const actual = Buffer.from(signature, "utf8");
+  return expected.length === actual.length && timingSafeEqual(expected, actual);
 }
 
 /** RFC 3339 / ISO-8601 using 'Z', without milliseconds when zero (matches Go/Java/Python). */

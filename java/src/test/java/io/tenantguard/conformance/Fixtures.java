@@ -2,11 +2,14 @@ package io.tenantguard.conformance;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.tenantguard.audit.Outcome;
+import io.tenantguard.audit.TenantEvent;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -40,6 +43,21 @@ final class Fixtures {
         }
         throw new IllegalStateException(
                 "could not locate testkit/compliance-tests/fixtures from " + start);
+    }
+
+    /** Builds a TenantEvent from a fixture "event" node (tenant-event / auditforge-signing). */
+    static TenantEvent event(JsonNode ev) {
+        return new TenantEvent(
+                ev.get("eventId").asText(),
+                ev.get("eventType").asText(),
+                ev.get("tenantId").asText(),
+                Instant.parse(ev.get("timestamp").asText()),
+                Outcome.fromValue(ev.get("outcome").asText()),
+                text(ev, "traceId"),
+                text(ev, "actor"),
+                text(ev, "resource"),
+                map(ev.get("metadata")),
+                text(ev, "signature"));
     }
 
     /** Returns the text of a field, or "" when absent or JSON null. */

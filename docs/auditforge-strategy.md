@@ -31,11 +31,14 @@ the same fixture-driven, spec-first method that produced the four TenantGuard co
 ### Phase B — Signing clients (in progress)
 Turn the deferred Ring-5 `AuditHook` stub into a real signer in each TenantGuard language:
 - a `sign(event, secret) -> hex` function proven against `auditforge-signing.json` (add a
-  case to each language's conformance harness — a pure, DB-free, network-free vector test);
-  **Go done** — `audit.Sign`/`Verify`/`CanonicalJSON` (`go/tenantguard/audit/signing.go`),
-  proven by `TestAuditForgeSigningFixtures` against both golden vectors.
+  case to each language's conformance harness — a pure, DB-free, network-free vector test).
+  **Done in all four languages** — each exposes `sign`/`verify`/`canonicalJson` next to its
+  `TenantEvent` (Go `audit.Sign`; Java `io.tenantguard.audit.Signing`; Python
+  `tenantguard.audit.sign`; TS `sign` in `@tenantguard/core/audit`), and each conformance
+  harness proves both golden vectors (canonical bytes and HMAC checked separately). Every
+  signer is stdlib-only (HMAC-SHA256 + hex).
 - an `AuditForgeHook implements AuditHook` that signs each event and POSTs an `IngestRequest`
-  to `/v1/events`, with retry/backoff and the `keyId` header.
+  to `/v1/events`, with retry/backoff and the `keyId` header. **(next)**
 - Start in Go (reference), then Java/Python/TS. Each only needs an HMAC primitive + an HTTP
   client — both in every standard library.
 

@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 import logging
 import secrets
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from enum import Enum
 from types import MappingProxyType
@@ -73,6 +75,27 @@ class TenantEvent:
         if self.signature:
             obj["signature"] = self.signature
         return json.dumps(obj, separators=(",", ":"), ensure_ascii=False)
+
+
+def canonical_json(event: TenantEvent) -> str:
+    """Return the exact bytes that are signed for ``event``: its canonical JSON with any
+    signature cleared, so a stale signature never feeds back into the signed form
+    (ecosystem/auditforge/spec.md, "The signing contract")."""
+    if event.signature:
+        event = replace(event, signature="")
+    return event.to_json()
+
+
+def sign(event: TenantEvent, secret: bytes) -> str:
+    """Return the lowercase-hex HMAC-SHA256 of ``event``'s canonical form under ``secret``."""
+    return hmac.new(secret, canonical_json(event).encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+def verify(event: TenantEvent, secret: bytes, signature: str) -> bool:
+    """Report whether ``signature`` is a valid HMAC-SHA256 over ``event``'s canonical form.
+
+    The comparison is constant-time."""
+    return hmac.compare_digest(sign(event, secret), signature)
 
 
 def _iso(ts: datetime) -> str:

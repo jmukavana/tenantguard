@@ -2,13 +2,11 @@ package io.tenantguard.conformance;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.tenantguard.audit.Outcome;
 import io.tenantguard.audit.TenantEvent;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
 
 import java.io.IOException;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
@@ -33,18 +31,7 @@ class TenantEventConformanceTest {
     }
 
     private void runCase(JsonNode c) throws IOException {
-        JsonNode ev = c.get("event");
-        TenantEvent event = new TenantEvent(
-                ev.get("eventId").asText(),
-                ev.get("eventType").asText(),
-                ev.get("tenantId").asText(),
-                Instant.parse(ev.get("timestamp").asText()),
-                Outcome.fromValue(ev.get("outcome").asText()),
-                Fixtures.text(ev, "traceId"),
-                Fixtures.text(ev, "actor"),
-                Fixtures.text(ev, "resource"),
-                Fixtures.map(ev.get("metadata")),
-                Fixtures.text(ev, "signature"));
+        TenantEvent event = Fixtures.event(c.get("event"));
 
         JsonNode out = MAPPER.readTree(event.toJson());
         JsonNode expect = c.get("expect");
