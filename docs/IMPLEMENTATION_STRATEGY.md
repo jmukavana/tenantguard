@@ -79,11 +79,14 @@ Postgres → audit event to a logging AuditHook**, joined by one `net/http` midd
   optional 403 gate. Full engine is post-v1.0.
 - **Gate:** `go test ./...` green; both isolation strategies verified against real Postgres.
 
-### Phase 3 — Lock the contract
-- Extract behavior into language-neutral fixtures under `testkit/compliance-tests/`:
-  resolver inputs→expected context, isolation query in→query out, event in→serialized JSON.
-- Build a Go harness that loads and asserts them. These fixtures become the definition of
-  "conformant" for every other language.
+### Phase 3 — Lock the contract — DONE
+- Language-neutral fixtures live in `testkit/compliance-tests/fixtures/` (see the README
+  there): tenant-context validation, header + subdomain resolution, schema-isolation naming
+  and injection rejection, `TenantEvent` JSON shape, and W3C Baggage propagation encoding.
+  Errors are symbolic codes mapped per-language.
+- The Go reference harness at `go/tenantguard/conformance/` loads every fixture and asserts
+  the real packages against it — the template each other language mirrors.
+- **Gate:** `go test ./conformance/` green; these fixtures now *define* conformance.
 
 ### Phase 4 — Port Java, then Python, then TypeScript
 For each: populate the build file, implement Ring 0→4 against the **same fixtures**, then add

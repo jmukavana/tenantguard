@@ -1,0 +1,39 @@
+{
+  "description": "TenantEvent JSON shape: required keys always present, empty optionals omitted.",
+  "cases": [
+    {
+      "name": "minimal event",
+      "event": {
+        "eventId": "e1",
+        "eventType": "tenant.resolved",
+        "tenantId": "acme",
+        "timestamp": "2026-01-01T00:00:00Z",
+        "outcome": "allowed"
+      },
+      "expect": {
+        "requiredKeys": ["eventId", "eventType", "tenantId", "timestamp", "outcome"],
+        "absentKeys": ["traceId", "actor", "resource", "metadata", "signature"],
+        "values": { "eventType": "tenant.resolved", "tenantId": "acme", "outcome": "allowed" }
+      }
+    },
+    {
+      "name": "full event",
+      "event": {
+        "eventId": "e2",
+        "eventType": "policy.denied",
+        "tenantId": "acme",
+        "timestamp": "2026-01-01T00:00:00Z",
+        "outcome": "denied",
+        "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+        "actor": "user-7",
+        "resource": "/orders",
+        "metadata": { "reason": "tenant is frozen" }
+      },
+      "expect": {
+        "requiredKeys": ["eventId", "eventType", "tenantId", "timestamp", "outcome", "traceId", "actor", "resource", "metadata"],
+        "absentKeys": ["signature"],
+        "values": { "outcome": "denied", "actor": "user-7", "resource": "/orders" }
+      }
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "description": "Schema-based isolation: tenant id to schema name, and injection rejection.",
+  "cases": [
+    { "name": "basic", "prefix": "tenant_", "tenantId": "acme", "expect": { "schema": "tenant_acme" } },
+    { "name": "digits and underscore allowed", "prefix": "t_", "tenantId": "acme_42", "expect": { "schema": "t_acme_42" } },
+    { "name": "empty prefix", "prefix": "", "tenantId": "acme", "expect": { "schema": "acme" } },
+    { "name": "quote-injection rejected", "prefix": "tenant_", "tenantId": "acme\"; DROP SCHEMA public CASCADE; --", "expect": { "error": "unsafe_tenant_id" } },
+    { "name": "space rejected", "prefix": "tenant_", "tenantId": "acme public", "expect": { "error": "unsafe_tenant_id" } },
+    { "name": "hyphen rejected", "prefix": "tenant_", "tenantId": "acme-1", "expect": { "error": "unsafe_tenant_id" } }
+  ]
+}

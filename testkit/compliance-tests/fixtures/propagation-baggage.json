@@ -1,0 +1,31 @@
+{
+  "description": "W3C Baggage encoding of a TenantContext (cross-language propagation interop). Members use the tg.* namespace; tg.tenant.meta is the JSON-encoded metadata map. Exact-match cases use single-key metadata to keep JSON deterministic; multi-key metadata is covered by round-trip in the harness.",
+  "cases": [
+    {
+      "name": "id only",
+      "context": { "tenantId": "acme" },
+      "expectMembers": { "tg.tenant.id": "acme" }
+    },
+    {
+      "name": "id, name and trace",
+      "context": {
+        "tenantId": "acme",
+        "tenantName": "Acme Ltd",
+        "traceId": "4bf92f3577b34da6a3ce929d0e0e4736"
+      },
+      "expectMembers": {
+        "tg.tenant.id": "acme",
+        "tg.tenant.name": "Acme Ltd",
+        "tg.trace.id": "4bf92f3577b34da6a3ce929d0e0e4736"
+      }
+    },
+    {
+      "name": "single metadata key",
+      "context": { "tenantId": "acme", "metadata": { "region": "ke" } },
+      "expectMembers": {
+        "tg.tenant.id": "acme",
+        "tg.tenant.meta": "{\"region\":\"ke\"}"
+      }
+    }
+  ]
+}

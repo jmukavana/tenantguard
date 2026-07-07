@@ -1,0 +1,44 @@
+{
+  "description": "HTTP header tenant resolution and W3C traceparent extraction.",
+  "cases": [
+    {
+      "name": "default header present",
+      "headers": { "X-Tenant-ID": "acme" },
+      "expect": { "tenantId": "acme", "traceId": "" }
+    },
+    {
+      "name": "value is trimmed",
+      "headers": { "X-Tenant-ID": "  acme  " },
+      "expect": { "tenantId": "acme" }
+    },
+    {
+      "name": "custom header name",
+      "header": "X-Org",
+      "headers": { "X-Org": "beta" },
+      "expect": { "tenantId": "beta" }
+    },
+    {
+      "name": "missing header",
+      "headers": {},
+      "expect": { "error": "no_tenant" }
+    },
+    {
+      "name": "whitespace-only header",
+      "headers": { "X-Tenant-ID": "   " },
+      "expect": { "error": "no_tenant" }
+    },
+    {
+      "name": "traceparent seeds trace id",
+      "headers": {
+        "X-Tenant-ID": "acme",
+        "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+      },
+      "expect": { "tenantId": "acme", "traceId": "4bf92f3577b34da6a3ce929d0e0e4736" }
+    },
+    {
+      "name": "malformed traceparent is ignored, request still valid",
+      "headers": { "X-Tenant-ID": "acme", "traceparent": "garbage" },
+      "expect": { "tenantId": "acme", "traceId": "" }
+    }
+  ]
+}

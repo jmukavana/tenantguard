@@ -29,6 +29,10 @@ first, then port). What is real today:
   - `policy` — minimal allow/deny `PolicyHook`.
   - `middleware` — the `net/http` request pipeline (resolve → immutable context → optional
     policy gate → audit), plus an `examples/httpguard` demo.
+  - `conformance` — test-only harness running the language-neutral fixtures in
+    `testkit/compliance-tests/fixtures/` against the real packages. These fixtures **define**
+    cross-language conformance; every future port (Java/Python/TS) must pass them. Changing a
+    fixture changes the contract for all languages — do it in step with `core/spec.md`.
   - All tested; `go test ./...` green. Depends on `github.com/lib/pq` (integration tests)
     and `go.opentelemetry.io/otel` (baggage propagation).
   - Not yet implemented: JWT-claim resolver (needs signature-verification infra) and

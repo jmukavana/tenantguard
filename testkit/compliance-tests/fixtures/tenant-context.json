@@ -1,0 +1,41 @@
+{
+  "description": "TenantContext construction and validation (core/spec.md, ADR-004).",
+  "cases": [
+    {
+      "name": "valid minimal",
+      "input": { "tenantId": "acme" },
+      "expect": { "valid": true, "tenantId": "acme", "tenantName": "", "traceId": "", "metadata": {} }
+    },
+    {
+      "name": "valid full",
+      "input": {
+        "tenantId": "acme",
+        "tenantName": "Acme Ltd",
+        "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+        "metadata": { "region": "ke", "tier": "gold" }
+      },
+      "expect": {
+        "valid": true,
+        "tenantId": "acme",
+        "tenantName": "Acme Ltd",
+        "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+        "metadata": { "region": "ke", "tier": "gold" }
+      }
+    },
+    {
+      "name": "empty tenant id is rejected",
+      "input": { "tenantId": "" },
+      "expect": { "error": "empty_tenant_id" }
+    },
+    {
+      "name": "malformed trace id is rejected",
+      "input": { "tenantId": "acme", "traceId": "not-a-w3c-trace-id" },
+      "expect": { "error": "invalid_trace_id" }
+    },
+    {
+      "name": "uppercase trace id is rejected",
+      "input": { "tenantId": "acme", "traceId": "4BF92F3577B34DA6A3CE929D0E0E4736" },
+      "expect": { "error": "invalid_trace_id" }
+    }
+  ]
+}

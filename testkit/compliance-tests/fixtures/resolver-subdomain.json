@@ -1,0 +1,13 @@
+{
+  "description": "Subdomain-to-tenant resolution: left-most label under the base domain.",
+  "cases": [
+    { "name": "simple subdomain", "baseDomain": "example.com", "host": "acme.example.com", "expect": { "tenantId": "acme" } },
+    { "name": "host with port", "baseDomain": "example.com", "host": "acme.example.com:8443", "expect": { "tenantId": "acme" } },
+    { "name": "case-insensitive", "baseDomain": "example.com", "host": "ACME.Example.Com", "expect": { "tenantId": "acme" } },
+    { "name": "nested labels, left-most wins", "baseDomain": "example.com", "host": "acme.eu.example.com", "expect": { "tenantId": "acme" } },
+    { "name": "apex has no tenant", "baseDomain": "example.com", "host": "example.com", "expect": { "error": "no_tenant" } },
+    { "name": "www is ignored by default", "baseDomain": "example.com", "host": "www.example.com", "expect": { "error": "no_tenant" } },
+    { "name": "wrong base domain", "baseDomain": "example.com", "host": "acme.other.com", "expect": { "error": "no_tenant" } },
+    { "name": "custom ignore list", "baseDomain": "example.com", "host": "admin.example.com", "ignore": ["www", "admin"], "expect": { "error": "no_tenant" } }
+  ]
+}
