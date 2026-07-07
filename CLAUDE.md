@@ -39,11 +39,14 @@ first, then port). What is real today:
     Database-per-Tenant isolation (needs connection routing) — deliberately deferred.
 - `README.md`, `ROADMAP.MD`, `docs/IMPLEMENTATION_STRATEGY.md`, `.github/workflows/ci-go.yml`.
 
-- **Java, Ring 0** under `java/` (single-module Maven, JDK 17; `io.tenantguard`): immutable
-  `TenantContext` (a validating record) + a JUnit 5 conformance harness that reads the shared
-  `tenant-context.json` fixture. `cd java && mvn -B test` green. Jackson/JUnit are test-only;
-  the core has no runtime deps. Rings 1–4 and the Spring/JPA adapters are not built yet; the
-  multi-module split (`tenantguard-core`, `tenantguard-jpa`, ...) is a later refactor.
+- **Java, Rings 0–1** under `java/` (single-module Maven, JDK 17; `io.tenantguard`): immutable
+  `TenantContext` (a validating record); `resolver.HeaderResolver` + `SubdomainResolver` over
+  a dependency-free `HttpRequestView` port (framework adapters wrap their request into it);
+  and a JUnit 5 conformance harness reading the shared `tenant-context`/`resolver-*` fixtures.
+  `cd java && mvn -B test` green. Jackson/JUnit are test-only; the core has no runtime deps.
+  Ring 2+ (isolation, propagation, audit, middleware) and the Spring/JPA adapters are not
+  built yet; the multi-module split (`tenantguard-core`, `tenantguard-jpa`, ...) is a later
+  refactor.
 
 The `python/` and `typescript/` build files (`pyproject.toml`, `package.json`) are still
 **empty stubs** — no code in those languages yet. Most `docs/` and `core/hooks/` files are

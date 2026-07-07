@@ -13,8 +13,8 @@
   <description>Java reference implementation of the TenantGuard core (see core/spec.md).</description>
 
   <!--
-    Single-module project for now. The multi-module split (tenantguard-core,
-    tenantguard-jpa, tenantguard-spring-boot-starter, ...) is a later refactor.
+    Single-module project for now. The multi-module split (tenant guard-core,
+    tenant guard-jpa, tenantguard-spring-boot-starter, ...) is a later refactor.
     Production code (io.tenantguard) has no runtime dependencies; Jackson is
     test-only, used by the conformance harness to read the shared fixtures.
   -->

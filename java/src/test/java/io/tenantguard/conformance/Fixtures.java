@@ -7,7 +7,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -51,6 +53,15 @@ final class Fixtures {
         Map<String, String> out = new HashMap<>();
         if (node != null && node.isObject()) {
             node.fields().forEachRemaining(e -> out.put(e.getKey(), e.getValue().asText()));
+        }
+        return out;
+    }
+
+    /** Reads a JSON array into a list of strings ({@code null}/absent yields empty). */
+    static List<String> list(JsonNode node) {
+        List<String> out = new ArrayList<>();
+        if (node != null && node.isArray()) {
+            node.forEach(n -> out.add(n.asText()));
         }
         return out;
     }
