@@ -156,13 +156,17 @@ adding code so the four implementations stay structurally mirrored.
 
 ## Build & test
 
-Go is the reference implementation and the only wired-up CI (`.github/workflows/ci-go.yml`,
-Go 1.23). Once Go code exists:
+Go is the reference implementation. All four languages plus AuditForge have wired-up CI
+(`.github/workflows/ci-go.yml`, `ci-python.yml`, `ci-typescript.yml`, `ci-auditforge.yml`);
+the Go workflows use Go 1.25 to match the modules' `go 1.25.0` directive.
 
 ```bash
 cd go/tenantguard && go test ./... -v      # matches CI; module lives here, not go/
 cd go/tenantguard && go test ./context/    # single package
 ```
+
+The `ci-auditforge.yml` job stands up a Postgres service and sets `TENANTGUARD_POSTGRES_DSN`
+so the schema-isolation integration test runs in CI rather than skipping.
 
 The Go module root is `go/tenantguard/` (module path `github.com/tenantguard/tenantguard`,
 so imports read `github.com/tenantguard/tenantguard/context`). The package in `context/` is

@@ -1,0 +1,37 @@
+name: CI - AuditForge
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    # A real Postgres so the schema-isolation integration test runs (not skips): it proves
+    # idempotency and that one tenant's query never resolves another tenant's events.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: tg
+          POSTGRES_DB: tenantguard
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+      # The module depends on TenantGuard via a local `replace`, so the full checkout must be
+      # present. TENANTGUARD_POSTGRES_DSN activates the real-Postgres store test.
+      - run: cd ecosystem/auditforge && go vet ./...
+      - run: cd ecosystem/auditforge && go test ./... -v
+        env:
+          TENANTGUARD_POSTGRES_DSN: postgres://postgres:tg@localhost:5432/tenantguard?sslmode=disable
