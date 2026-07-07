@@ -88,11 +88,15 @@ Postgres → audit event to a logging AuditHook**, joined by one `net/http` midd
   the real packages against it — the template each other language mirrors.
 - **Gate:** `go test ./conformance/` green; these fixtures now *define* conformance.
 
-### Phase 4 — Port Java, then Python, then TypeScript
+### Phase 4 — Port Java, then Python, then TypeScript — IN PROGRESS (Java)
 For each: populate the build file, implement Ring 0→4 against the **same fixtures**, then add
 that ecosystem's idiomatic adapters. Wire the already-present per-language CI workflow.
-- Java: `pom.xml` (JDK 17+), Spring Boot starter, JPA + JDBC, `opentelemetry-java`, Jackson,
-  JUnit 5, Testcontainers.
+- Java: **Ring 0 done** — `pom.xml` (single-module, JDK 17), immutable `TenantContext` as a
+  validating record, and a JUnit 5 conformance harness (`java/src/test/.../conformance/`)
+  that reads the shared `tenant-context.json` fixture and passes. CI wired (`ci-java.yml`).
+  Next: Ring 1→4 (resolver, isolation, propagation, audit, middleware) against the remaining
+  fixtures, then Spring Boot starter, JPA + JDBC, `opentelemetry-java`. The multi-module
+  split (`tenantguard-core`, `tenantguard-jpa`, ...) is a later refactor of the flat project.
 - Python: `pyproject.toml` (3.10+), FastAPI/Starlette, SQLAlchemy, `opentelemetry-python`,
   Pydantic, pytest, testcontainers-python.
 - TypeScript: `package.json`, Express, `@opentelemetry/*`, Zod, Vitest.
