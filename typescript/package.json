@@ -1,0 +1,25 @@
+{
+  "name": "@tenantguard/core",
+  "version": "0.1.0",
+  "description": "TypeScript reference implementation of the TenantGuard core (see core/spec.md).",
+  "type": "module",
+  "license": "Apache-2.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}

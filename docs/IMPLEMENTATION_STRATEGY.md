@@ -109,7 +109,10 @@ that ecosystem's idiomatic adapters. Wire the already-present per-language CI wo
   pytest harness passes **all 6** shared fixture groups. CI wired (`ci-python.yml`). Next:
   FastAPI/Starlette middleware + SQLAlchemy adapters. Deferred like Go/Java: JWT-claim
   resolver, Database-per-Tenant.
-- TypeScript: `package.json`, Express, `@opentelemetry/*`, Zod, Vitest.
+- TypeScript: **Ring 0 done** — `package.json`/`tsconfig.json` (ESM, NodeNext); immutable
+  `TenantContext` (`Object.freeze`d class + frozen metadata copy); Vitest conformance harness
+  reading `tenant-context.json`; CI wired (`ci-typescript.yml`). Next rings, then Express,
+  `@opentelemetry/api`.
 
 ### Phase 5 — Ecosystem edges
 Real AuditForge client (signed/authenticated channel per spec §Security), Kafka/Redis
