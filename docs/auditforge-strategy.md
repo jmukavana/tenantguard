@@ -46,14 +46,23 @@ Turn the deferred Ring-5 `AuditHook` stub into a real signer in each TenantGuard
   exponential backoff. Every client is stdlib-only (HMAC + an HTTP client) and is tested
   against an in-process fake AuditForge that verifies the signature it receives.
 
-### Phase C — Ingestion service (Go)
-- `POST /v1/events`: verify each event's signature (recompute canonical form, HMAC, constant
-  -time compare), apply idempotency by `eventId`, append to the tenant's schema-isolated log.
-  Return an `IngestAck`. Uses TenantGuard's `SchemaStrategy` for per-tenant storage.
-- `GET /v1/events`: tenant-scoped query via TenantGuard resolution + isolation.
-- **Gate:** a real-Postgres integration test (the testcontainers pattern already used) showing
-  a valid batch is stored once (idempotent on redelivery), a tampered event is `rejected`,
-  and tenant A cannot read tenant B's events.
+### Phase C — Ingestion service (Go) — in progress
+The service lives in its own module, `github.com/tenantguard/auditforge` under
+`ecosystem/auditforge/`, importing TenantGuard (local `replace`). Structure:
+`keyring` (keyId→secret), `store` (the `Store` seam + a `Memory` implementation), `ingest`
+(the `Service` + `net/http` handlers), and `cmd/auditforged`.
+- `POST /v1/events`: **done** — recompute the canonical form and verify each signature with
+  TenantGuard's `audit.Verify` (byte-identical to every emitter), reject `unknown_key` /
+  `malformed_event` / `invalid_signature` per event (batch still 200), apply idempotency by
+  `eventId`, and append via the `Store`. Proven against the `auditforge-signing.json` golden
+  vectors from the verifier's side, plus tamper/unknown-key/malformed/redelivery cases.
+- `GET /v1/events`: **done** — tenant resolved from the request by TenantGuard's
+  `HeaderResolver` (dogfooding), results isolated to that tenant; `from`/`to` RFC 3339 bounds.
+  End-to-end `httptest` proves tenant A cannot read tenant B's events.
+- **Remaining gate:** swap the `Memory` store for a Postgres, schema-isolated backend using
+  TenantGuard's `SchemaStrategy`, proven by a real-Postgres integration test (the
+  testcontainers pattern already used) — one event stored once, idempotent on redelivery,
+  isolation enforced at the database.
 
 ### Phase D — Tamper-evidence & retention
 - Per-tenant hash chaining (`hash = SHA-256(prevHash || canonical)`), a chain-verify endpoint,
@@ -66,5 +75,6 @@ Turn the deferred Ring-5 `AuditHook` stub into a real signer in each TenantGuard
    `CanonicalJSON` + `TestAuditForgeSigningFixtures`.
 2. ~~Implement `AuditForgeHook` (Go) that signs + POSTs an `IngestRequest`.~~ **Done** —
    `auditforge.Hook`, tested against a fake AuditForge that verifies each signature.
-3. Stand up the Go ingestion service skeleton with signature verification, tested against the
-   same golden vectors from the verifier's side.
+3. ~~Stand up the Go ingestion service skeleton with signature verification, tested against
+   the same golden vectors from the verifier's side.~~ **Done** — `ecosystem/auditforge/`
+   (`ingest.Service` + `Memory` store); next is the Postgres, schema-isolated backend.

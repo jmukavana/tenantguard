@@ -91,8 +91,17 @@ first, then port). What is real today:
   four languages** — Java `auditforge.AuditForgeHook` (`java.net.http`; `internal.Json` gained
   a general value parser for the `IngestAck`), Python `tenantguard.audit.auditforge`
   (`urllib`), TS `AuditForgeHook` (`fetch`) — same semantics, each stdlib-only and tested
-  against an in-process fake AuditForge. Still to come: the ingestion service (Phase C), which
-  will dogfood TenantGuard for its own multitenancy.
+  against an in-process fake AuditForge. The **Go ingestion service** (Phase C) now exists as
+  its own module `github.com/tenantguard/auditforge` under `ecosystem/auditforge/` (imports
+  TenantGuard via a local `replace`; `go 1.25.0` to match the reference module): `keyring`
+  (keyId→secret), `store` (a `Store` seam + in-memory impl), `ingest` (the `Service` +
+  `net/http` `POST`/`GET /v1/events`), and `cmd/auditforged`. It verifies each event with
+  `audit.Verify` (dogfooding the byte-identical canonical form), rejects
+  unknown-key/malformed/bad-signature per event (batch still 200), is idempotent by `eventId`,
+  and resolves the query tenant via `HeaderResolver` so `GET` is tenant-isolated — all proven
+  against the golden vectors and by an `httptest` isolation test. `cd ecosystem/auditforge &&
+  go test ./...` green. Remaining: the Postgres, schema-isolated `Store` (using
+  `SchemaStrategy`) with a real-Postgres integration test.
 
 Most `docs/` and `core/hooks/` files are still empty placeholders.
 
