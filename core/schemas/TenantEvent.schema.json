@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tenantguard.io/schemas/TenantEvent.schema.json",
+  "title": "TenantEvent",
+  "description": "Structured audit record emitted for every tenant-aware operation and published to AuditForge over an authenticated channel (core/spec.md, Security Requirements). This schema is the cross-language contract; all implementations MUST serialize to it.",
+  "type": "object",
+  "required": ["eventId", "eventType", "tenantId", "timestamp", "outcome"],
+  "additionalProperties": false,
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "description": "Unique event identifier (UUID recommended). Idempotency key for AuditForge.",
+      "minLength": 1
+    },
+    "eventType": {
+      "type": "string",
+      "description": "What happened, in dotted namespace form, e.g. 'tenant.resolved', 'db.access', 'tenant.switch.rejected'.",
+      "minLength": 1
+    },
+    "tenantId": {
+      "type": "string",
+      "description": "Tenant the event belongs to. Matches TenantContext.tenantId.",
+      "minLength": 1
+    },
+    "timestamp": {
+      "type": "string",
+      "description": "Event time in RFC 3339 / ISO 8601 UTC.",
+      "format": "date-time"
+    },
+    "outcome": {
+      "type": "string",
+      "description": "Result of the operation being audited.",
+      "enum": ["allowed", "denied", "error"]
+    },
+    "traceId": {
+      "type": "string",
+      "description": "W3C trace-id correlating this event with the originating request.",
+      "pattern": "^[0-9a-f]{32}$"
+    },
+    "actor": {
+      "type": "string",
+      "description": "Principal that triggered the operation (user id, service account, system)."
+    },
+    "resource": {
+      "type": "string",
+      "description": "Target of the operation, e.g. a schema name, table, topic, or endpoint."
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional structured context for the event.",
+      "additionalProperties": { "type": "string" }
+    },
+    "signature": {
+      "type": "string",
+      "description": "Optional detached signature over the event body when events are signed rather than sent over an authenticated channel."
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tenantguard.io/schemas/TenantContext.schema.json",
+  "title": "TenantContext",
+  "description": "Immutable identity of the tenant on whose behalf an operation runs. Once created it MUST NOT change (see core/spec.md, ADR-004). Carried across every tenant-aware operation.",
+  "type": "object",
+  "required": ["tenantId"],
+  "additionalProperties": false,
+  "properties": {
+    "tenantId": {
+      "type": "string",
+      "description": "Stable, unique identifier of the tenant. Non-empty. The isolation boundary key.",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "tenantName": {
+      "type": "string",
+      "description": "Human-readable tenant name. Informational only; never used as an isolation key.",
+      "maxLength": 512
+    },
+    "traceId": {
+      "type": "string",
+      "description": "W3C Trace Context trace-id (32 lowercase hex chars) correlating this context across services.",
+      "pattern": "^[0-9a-f]{32}$"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Opaque string->string tenant attributes (region, tier, regulator, etc.). Not trusted for isolation decisions.",
+      "additionalProperties": { "type": "string" }
+    }
+  }
+}
