@@ -91,14 +91,14 @@ Postgres → audit event to a logging AuditHook**, joined by one `net/http` midd
 ### Phase 4 — Port Java, then Python, then TypeScript — IN PROGRESS (Java)
 For each: populate the build file, implement Ring 0→4 against the **same fixtures**, then add
 that ecosystem's idiomatic adapters. Wire the already-present per-language CI workflow.
-- Java: **Rings 0–1 done** — `pom.xml` (single-module, JDK 17); immutable `TenantContext`
+- Java: **Rings 0–2 done** — `pom.xml` (single-module, JDK 17); immutable `TenantContext`
   record (Ring 0); `HeaderResolver` + `SubdomainResolver` over a dependency-free
-  `HttpRequestView` port (Ring 1). A JUnit 5 conformance harness reads the shared fixtures
-  (`tenant-context`, `resolver-header`, `resolver-subdomain`) and passes. CI wired
-  (`ci-java.yml`). Next: Ring 2 (schema isolation vs `isolation-schema.json`, `TenantEvent`
-  vs `tenant-event.json`), then propagation (`opentelemetry-java` vs `propagation-baggage.json`),
-  then the servlet/Spring middleware + JPA/JDBC adapters. The multi-module split
-  (`tenantguard-core`, `tenantguard-jpa`, ...) is a later refactor of the flat project.
+  `HttpRequestView` port (Ring 1); `SchemaStrategy` (schema naming + injection rejection;
+  JDBC `bind` via the JDK's `java.sql`) and a hand-serialized `TenantEvent` + `AuditHook`
+  (Ring 2). The JUnit 5 harness passes **5 of 6** shared fixture groups (all but
+  propagation). CI wired (`ci-java.yml`). Next: propagation (`opentelemetry-java` vs
+  `propagation-baggage.json`), then the servlet/Spring middleware + JPA/JDBC adapters. The
+  multi-module split (`tenantguard-core`, `tenantguard-jpa`, ...) is a later refactor.
 - Python: `pyproject.toml` (3.10+), FastAPI/Starlette, SQLAlchemy, `opentelemetry-python`,
   Pydantic, pytest, testcontainers-python.
 - TypeScript: `package.json`, Express, `@opentelemetry/*`, Zod, Vitest.
