@@ -91,14 +91,17 @@ Postgres → audit event to a logging AuditHook**, joined by one `net/http` midd
 ### Phase 4 — Port Java, then Python, then TypeScript — IN PROGRESS (Java)
 For each: populate the build file, implement Ring 0→4 against the **same fixtures**, then add
 that ecosystem's idiomatic adapters. Wire the already-present per-language CI workflow.
-- Java: **Rings 0–2 done** — `pom.xml` (single-module, JDK 17); immutable `TenantContext`
-  record (Ring 0); `HeaderResolver` + `SubdomainResolver` over a dependency-free
-  `HttpRequestView` port (Ring 1); `SchemaStrategy` (schema naming + injection rejection;
-  JDBC `bind` via the JDK's `java.sql`) and a hand-serialized `TenantEvent` + `AuditHook`
-  (Ring 2). The JUnit 5 harness passes **5 of 6** shared fixture groups (all but
-  propagation). CI wired (`ci-java.yml`). Next: propagation (`opentelemetry-java` vs
-  `propagation-baggage.json`), then the servlet/Spring middleware + JPA/JDBC adapters. The
-  multi-module split (`tenantguard-core`, `tenantguard-jpa`, ...) is a later refactor.
+- Java: **core rings done, full fixture parity with Go** — `pom.xml` (single-module,
+  JDK 17); immutable `TenantContext` record (Ring 0); `HeaderResolver` + `SubdomainResolver`
+  over a dependency-free `HttpRequestView` port (Ring 1); `SchemaStrategy` (schema naming +
+  injection rejection; JDBC `bind` via the JDK's `java.sql`) and a hand-serialized
+  `TenantEvent` + `AuditHook` (Ring 2); `propagation.Propagator` over W3C Baggage
+  (`opentelemetry-api`, the one runtime dep) with a dependency-free flat-object JSON codec
+  (`internal.Json`) for metadata. The JUnit 5 harness passes **all 6** shared fixture groups.
+  The propagation fixture asserts exact baggage members, so Go and Java are proven to emit
+  interoperable W3C Baggage. CI wired (`ci-java.yml`). Next: the servlet/Spring middleware +
+  JPA/JDBC adapters, then the multi-module split (a later refactor of the flat project).
+  Deferred like Go: JWT-claim resolver, Database-per-Tenant.
 - Python: `pyproject.toml` (3.10+), FastAPI/Starlette, SQLAlchemy, `opentelemetry-python`,
   Pydantic, pytest, testcontainers-python.
 - TypeScript: `package.json`, Express, `@opentelemetry/*`, Zod, Vitest.

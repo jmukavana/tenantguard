@@ -39,16 +39,17 @@ first, then port). What is real today:
     Database-per-Tenant isolation (needs connection routing) — deliberately deferred.
 - `README.md`, `ROADMAP.MD`, `docs/IMPLEMENTATION_STRATEGY.md`, `.github/workflows/ci-go.yml`.
 
-- **Java, Rings 0–2** under `java/` (single-module Maven, JDK 17; `io.tenantguard`): immutable
-  `TenantContext` record; `resolver.HeaderResolver` + `SubdomainResolver` over a
-  dependency-free `HttpRequestView` port (framework adapters wrap their request into it);
-  `isolation.SchemaStrategy` (schema naming + injection rejection, JDBC `bind` via the JDK's
-  `java.sql`); `audit.TenantEvent` (hand-serialized `toJson`, so no JSON runtime dep) +
-  `AuditHook`/`LoggingAuditHook`. The JUnit 5 harness passes 5 of 6 shared fixture groups
-  (all but propagation). `cd java && mvn -B test` green; Jackson/JUnit are test-only, the core
-  has no runtime deps. Propagation, the servlet/Spring middleware, and JPA/JDBC adapters are
-  not built yet; the multi-module split (`tenantguard-core`, `tenantguard-jpa`, ...) is a
-  later refactor.
+- **Java core (full fixture parity with Go)** under `java/` (single-module Maven, JDK 17;
+  `io.tenantguard`): immutable `TenantContext` record; `resolver.HeaderResolver` +
+  `SubdomainResolver` over a dependency-free `HttpRequestView` port (framework adapters wrap
+  their request into it); `isolation.SchemaStrategy` (schema naming + injection rejection,
+  JDBC `bind` via the JDK's `java.sql`); `audit.TenantEvent` (hand-serialized `toJson`) +
+  `AuditHook`/`LoggingAuditHook`; `propagation.Propagator` over W3C Baggage with
+  `internal.Json` (a tiny flat-object JSON codec) for metadata. The JUnit 5 harness passes
+  **all 6** shared fixture groups. `cd java && mvn -B test` green. The **only** runtime dep is
+  `io.opentelemetry:opentelemetry-api` (propagation); Jackson/JUnit are test-only. The
+  servlet/Spring middleware and JPA/JDBC adapters are not built yet; the multi-module split
+  (`tenantguard-core`, `tenantguard-jpa`, ...) is a later refactor.
 
 The `python/` and `typescript/` build files (`pyproject.toml`, `package.json`) are still
 **empty stubs** — no code in those languages yet. Most `docs/` and `core/hooks/` files are

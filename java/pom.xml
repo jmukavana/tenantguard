@@ -23,9 +23,16 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <junit.version>5.10.2</junit.version>
     <jackson.version>2.17.1</jackson.version>
+    <opentelemetry.version>1.44.1</opentelemetry.version>
   </properties>
 
   <dependencies>
+    <!-- The only runtime dependency: OpenTelemetry Baggage, the propagation substrate. -->
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-api</artifactId>
+      <version>${opentelemetry.version}</version>
+    </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
