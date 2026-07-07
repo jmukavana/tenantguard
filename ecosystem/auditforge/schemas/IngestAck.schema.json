@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tenantguard.io/schemas/auditforge/IngestAck.schema.json",
+  "title": "IngestAck",
+  "description": "AuditForge's response to POST /v1/events. Partitions the submitted batch into accepted, duplicate, and rejected events. Returned with 200 even when some events are rejected; transport/auth failures use 4xx instead.",
+  "type": "object",
+  "required": ["received", "accepted", "duplicate", "rejected"],
+  "additionalProperties": false,
+  "properties": {
+    "received": {
+      "type": "integer",
+      "description": "Total number of events in the request.",
+      "minimum": 0
+    },
+    "accepted": {
+      "type": "array",
+      "description": "eventIds newly appended to the audit log.",
+      "items": { "type": "string" }
+    },
+    "duplicate": {
+      "type": "array",
+      "description": "eventIds already present (idempotent no-op).",
+      "items": { "type": "string" }
+    },
+    "rejected": {
+      "type": "array",
+      "description": "Events that were not stored, each with a reason (e.g. signature verification failure).",
+      "items": {
+        "type": "object",
+        "required": ["eventId", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "eventId": { "type": "string" },
+          "reason": {
+            "type": "string",
+            "description": "Rejection cause.",
+            "enum": ["invalid_signature", "unknown_key", "malformed_event", "outside_retention"]
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "description": "AuditForge event signing golden vectors (ecosystem/auditforge/spec.md, The signing contract). The canonical form is TenantEvent.toJson() of the unsigned event; the signature is lowercase-hex HMAC-SHA256(secret, utf8(canonical)). Every TenantGuard client and the AuditForge verifier MUST reproduce these exactly. `canonical` is included so a mismatch localizes to serialization vs. HMAC.",
+  "algorithm": "HMAC-SHA256",
+  "secret": "tenantguard-shared-secret",
+  "cases": [
+    {
+      "name": "minimal event",
+      "event": {
+        "eventId": "e1",
+        "eventType": "tenant.resolved",
+        "tenantId": "acme",
+        "timestamp": "2026-01-01T00:00:00Z",
+        "outcome": "allowed"
+      },
+      "canonical": "{\"eventId\":\"e1\",\"eventType\":\"tenant.resolved\",\"tenantId\":\"acme\",\"timestamp\":\"2026-01-01T00:00:00Z\",\"outcome\":\"allowed\"}",
+      "signature": "da9077c8af7669966d0abb1fe24ebbea7fb27dcd1287d2c3531a0982df872fec"
+    },
+    {
+      "name": "full event with metadata",
+      "event": {
+        "eventId": "e2",
+        "eventType": "policy.denied",
+        "tenantId": "acme",
+        "timestamp": "2026-01-01T00:00:00Z",
+        "outcome": "denied",
+        "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+        "actor": "user-7",
+        "resource": "/orders",
+        "metadata": { "reason": "tenant is frozen" }
+      },
+      "canonical": "{\"eventId\":\"e2\",\"eventType\":\"policy.denied\",\"tenantId\":\"acme\",\"timestamp\":\"2026-01-01T00:00:00Z\",\"outcome\":\"denied\",\"traceId\":\"4bf92f3577b34da6a3ce929d0e0e4736\",\"actor\":\"user-7\",\"resource\":\"/orders\",\"metadata\":{\"reason\":\"tenant is frozen\"}}",
+      "signature": "a3f988489b847e3e6d7628c3782e878e90677c819439394a24559386e6bc895a"
+    }
+  ]
+}

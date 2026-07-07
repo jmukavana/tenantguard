@@ -72,6 +72,14 @@ first, then port). What is real today:
   `npm run typecheck`); CI wired (`ci-typescript.yml`). Relative imports use `.js` extensions
   (NodeNext ESM); Vitest resolves them to `.ts`.
 
+- **AuditForge, contract foundation** under `ecosystem/auditforge/` — the audit event store
+  TenantGuard publishes to. `spec.md` (signing contract, ingest/query API, tamper-evident
+  storage), `schemas/IngestRequest|IngestAck.schema.json`, and HMAC-SHA256 signing **golden
+  vectors** in `testkit/compliance-tests/fixtures/auditforge-signing.json` (canonical form =
+  `TenantEvent.toJson()` of the unsigned event; verified with `openssl`). Build-out plan in
+  `docs/auditforge-strategy.md`. No AuditForge code yet — clients and the ingestion service
+  are next (AuditForge will dogfood TenantGuard for its own multitenancy).
+
 Most `docs/` and `core/hooks/` files are still empty placeholders.
 
 This is not currently a git repository.

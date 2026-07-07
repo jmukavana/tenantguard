@@ -36,6 +36,7 @@ language maps it to its own error type. See the mapping table below.
 | `isolation-schema.json`    | tenant-id → schema name, injection rejection         |
 | `tenant-event.json`        | `TenantEvent` JSON shape (required/omitted keys)     |
 | `propagation-baggage.json` | W3C Baggage encoding of a tenant context (interop)   |
+| `auditforge-signing.json`  | HMAC-SHA256 signing golden vectors (AuditForge)      |
 
 Changing a fixture changes the contract for all languages; do it deliberately and in step
 with `core/spec.md`.

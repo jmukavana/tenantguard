@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tenantguard.io/schemas/auditforge/IngestRequest.schema.json",
+  "title": "IngestRequest",
+  "description": "A batch of signed TenantEvents submitted to AuditForge POST /v1/events. Each event carries its own detached signature (see ecosystem/auditforge/spec.md, The signing contract).",
+  "type": "object",
+  "required": ["keyId", "events"],
+  "additionalProperties": false,
+  "properties": {
+    "keyId": {
+      "type": "string",
+      "description": "Identifier of the shared signing key used to sign every event in this batch.",
+      "minLength": 1
+    },
+    "events": {
+      "type": "array",
+      "description": "The signed TenantEvents. Each MUST validate against TenantEvent.schema.json and carry a non-empty signature.",
+      "minItems": 1,
+      "items": {
+        "$ref": "https://tenantguard.io/schemas/TenantEvent.schema.json"
+      }
+    }
+  }
+}
