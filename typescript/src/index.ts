@@ -22,3 +22,6 @@ export type { QueryRunner } from "./isolation/index.js";
 
 export { LoggingAuditHook, TenantEvent } from "./audit/index.js";
 export type { AuditHook, Outcome, TenantEventInit } from "./audit/index.js";
+
+export { Propagator } from "./propagation/index.js";
+export type { Carrier } from "./propagation/index.js";

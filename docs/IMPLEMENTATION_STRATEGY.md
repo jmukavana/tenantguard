@@ -109,11 +109,17 @@ that ecosystem's idiomatic adapters. Wire the already-present per-language CI wo
   pytest harness passes **all 6** shared fixture groups. CI wired (`ci-python.yml`). Next:
   FastAPI/Starlette middleware + SQLAlchemy adapters. Deferred like Go/Java: JWT-claim
   resolver, Database-per-Tenant.
-- TypeScript: **Rings 0–2 done** — immutable `TenantContext`; both resolvers over an
-  `HttpRequestView` interface; `SchemaStrategy` (naming + injection rejection, `QueryRunner`
-  `bind`) and `TenantEvent` (`toJson` via `JSON.stringify`). The Vitest harness passes 5 of 6
-  shared fixture groups (all but propagation); CI wired (`ci-typescript.yml`). Next:
-  propagation (`@opentelemetry/api`), then Express, SQL adapters.
+- TypeScript: **core rings done, full fixture parity** — immutable `TenantContext`; both
+  resolvers over an `HttpRequestView` interface; `SchemaStrategy` (naming + injection
+  rejection, `QueryRunner` `bind`); `TenantEvent` (`toJson` via `JSON.stringify`);
+  `propagation.Propagator` over W3C Baggage (`@opentelemetry/api` + `@opentelemetry/core`).
+  The Vitest harness passes **all 6** shared fixture groups; CI wired (`ci-typescript.yml`).
+  Next: Express middleware, SQL adapters. Deferred like the others: JWT-claim resolver,
+  Database-per-Tenant.
+
+**All four languages (Go, Java, Python, TypeScript) now pass all six shared fixture groups.**
+The propagation fixtures assert exact baggage members, so every pair emits interoperable W3C
+Baggage. What remains is per-language framework adapters, not core behavior.
 
 ### Phase 5 — Ecosystem edges
 Real AuditForge client (signed/authenticated channel per spec §Security), Kafka/Redis

@@ -17,6 +17,10 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
   },
+  "dependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/core": "^1.30.0"
+  },
   "devDependencies": {
     "@types/node": "^22.7.0",
     "typescript": "^5.6.0",
