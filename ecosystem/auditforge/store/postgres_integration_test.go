@@ -94,6 +94,57 @@ func TestPostgresStore_IdempotencyAndIsolation(t *testing.T) {
 	}
 }
 
+// TestPostgresStore_ChainTamperEvidence proves the hash chain detects an edit to a stored
+// record: after appending a chain, verification is intact; mutating a row's event JSON
+// without updating its hash makes verification fail at that record. Same skip rule.
+func TestPostgresStore_ChainTamperEvidence(t *testing.T) {
+	dsn := os.Getenv("TENANTGUARD_POSTGRES_DSN")
+	if dsn == "" {
+		t.Skip("set TENANTGUARD_POSTGRES_DSN to run the Postgres chain test")
+	}
+
+	ctx := context.Background()
+	db, err := sql.Open("postgres", dsn)
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	defer db.Close()
+
+	dropSchemas(t, db)
+	defer dropSchemas(t, db)
+
+	pg := store.NewPostgres(db, "tenant_")
+	base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	if _, err := pg.Append(ctx, event("acme", "a1", "tenant.resolved", base)); err != nil {
+		t.Fatalf("append a1: %v", err)
+	}
+	if _, err := pg.Append(ctx, event("acme", "a2", "policy.denied", base.Add(time.Hour))); err != nil {
+		t.Fatalf("append a2: %v", err)
+	}
+
+	intact, err := pg.VerifyChain(ctx, "acme")
+	if err != nil {
+		t.Fatalf("verify: %v", err)
+	}
+	if !intact.Intact || intact.Length != 2 {
+		t.Fatalf("fresh chain = %+v, want intact len 2", intact)
+	}
+
+	// Tamper: edit the stored event body of a1 but leave its hash untouched.
+	if _, err := db.ExecContext(ctx,
+		`UPDATE tenant_acme.events SET event = jsonb_set(event, '{actor}', '"forged"') WHERE event_id = 'a1'`); err != nil {
+		t.Fatalf("tamper: %v", err)
+	}
+
+	broken, err := pg.VerifyChain(ctx, "acme")
+	if err != nil {
+		t.Fatalf("verify after tamper: %v", err)
+	}
+	if broken.Intact || broken.BrokenAt != "a1" {
+		t.Fatalf("tampered chain = %+v, want broken at a1", broken)
+	}
+}
+
 func event(tenantID, eventID, eventType string, at time.Time) audit.Event {
 	e := audit.NewEvent(eventType, tenantID, "", audit.OutcomeAllowed)
 	e.EventID = eventID

@@ -68,9 +68,19 @@ The service lives in its own module, `github.com/tenantguard/auditforge` under
   swap `Memory` for `Postgres` unchanged.
 
 ### Phase D — Tamper-evidence & retention
-- Per-tenant hash chaining (`hash = SHA-256(prevHash || canonical)`), a chain-verify endpoint,
-  and configurable retention windows. Post-v1: Ed25519 detached signatures (same canonical
-  form, asymmetric algorithm) for non-repudiation.
+- **Hash chaining — done.** The `chain` package computes
+  `hash = lowercasehex(SHA-256(prevHash ‖ canonicalForm))` (genesis `prevHash = ""`), anchored
+  to golden vectors derived from the signing fixtures. Both stores link each new record and
+  expose `VerifyChain`; the Postgres store reads the head and inserts under an `EXCLUSIVE`
+  table lock so appends can't fork the chain. `GET /v1/events/chain` returns an intact/broken
+  report for the caller's tenant. A real-Postgres test proves an edit to a stored row is
+  detected (`brokenAt` the tampered eventId).
+- **Retention — next.** Configurable minimum retention windows and a guarded purge. Note the
+  tension with chaining: purging old records truncates the replayable chain, so purge needs a
+  signed checkpoint (store the head hash + length at the cut) so the surviving tail still
+  verifies. Design this before implementing.
+- **Post-v1:** Ed25519 detached signatures (same canonical form, asymmetric algorithm) for
+  non-repudiation.
 
 ## First three concrete steps
 1. ~~Add a `sign()` + `auditforge-signing.json` conformance test to the Go audit package

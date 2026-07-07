@@ -14,6 +14,7 @@ func (s Service) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /v1/events", s.handleIngest)
 	mux.HandleFunc("GET /v1/events", s.handleQuery)
+	mux.HandleFunc("GET /v1/events/chain", s.handleChain)
 	return mux
 }
 
@@ -62,6 +63,22 @@ func (s Service) handleQuery(w http.ResponseWriter, r *http.Request) {
 		events = []audit.Event{}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"events": events})
+}
+
+// handleChain replays the caller's tenant hash chain and returns a tamper-evidence report.
+// The tenant is resolved by TenantGuard, so a caller can only verify their own chain.
+func (s Service) handleChain(w http.ResponseWriter, r *http.Request) {
+	tc, err := resolver.HeaderResolver{}.Resolve(r)
+	if err != nil {
+		http.Error(w, "missing tenant", http.StatusBadRequest)
+		return
+	}
+	report, err := s.Store.VerifyChain(r.Context(), tc.TenantID())
+	if err != nil {
+		http.Error(w, "chain verification error", http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, http.StatusOK, report)
 }
 
 // parseBound parses an RFC 3339 timestamp, treating an empty value as unbounded (zero time).

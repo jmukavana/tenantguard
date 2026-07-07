@@ -48,6 +48,34 @@ func TestQueryIsolatesTenants(t *testing.T) {
 	}
 }
 
+func TestMemoryChainIsIntactAndAdvances(t *testing.T) {
+	m := NewMemory()
+	ctx := context.Background()
+	now := time.Now().UTC()
+
+	empty, _ := m.VerifyChain(ctx, "acme")
+	if !empty.Intact || empty.Length != 0 || empty.Head != "" {
+		t.Fatalf("empty chain report = %+v, want intact len 0 head \"\"", empty)
+	}
+
+	_, _ = m.Append(ctx, event("acme", "e1", now))
+	after1, _ := m.VerifyChain(ctx, "acme")
+	_, _ = m.Append(ctx, event("acme", "e2", now))
+	after2, _ := m.VerifyChain(ctx, "acme")
+
+	if !after2.Intact || after2.Length != 2 {
+		t.Fatalf("chain after two appends = %+v, want intact len 2", after2)
+	}
+	if after2.Head == after1.Head {
+		t.Error("appending an event should advance the chain head")
+	}
+	// A duplicate must not extend the chain.
+	_, _ = m.Append(ctx, event("acme", "e2", now))
+	if again, _ := m.VerifyChain(ctx, "acme"); again.Length != 2 || again.Head != after2.Head {
+		t.Errorf("duplicate changed the chain: %+v", again)
+	}
+}
+
 func TestQueryFiltersByTimeBounds(t *testing.T) {
 	m := NewMemory()
 	ctx := context.Background()

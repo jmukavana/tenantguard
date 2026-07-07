@@ -105,8 +105,13 @@ first, then port). What is real today:
   integration test (`store/postgres_integration_test.go`, skips unless
   `TENANTGUARD_POSTGRES_DSN` is set) that shows store-once/idempotent-redelivery/time-bounds
   and database-enforced cross-tenant isolation. `cd ecosystem/auditforge && go test ./...`
-  green (integration test needs `lib/pq`, the module's one non-TenantGuard dep). Next (Phase
-  D): per-tenant hash chaining for tamper-evidence and retention windows.
+  green (integration test needs `lib/pq`, the module's one non-TenantGuard dep). **Phase D
+  tamper-evidence is built**: the `chain` package hashes each record
+  (`hash = SHA-256(prevHash ‖ canonicalForm)`, genesis `""`; golden-vector tested), both
+  stores link records and expose `VerifyChain` (Postgres appends under an `EXCLUSIVE` lock so
+  the chain can't fork), and `GET /v1/events/chain` reports intact/broken for the caller's
+  tenant — a real-Postgres test proves an edit to a stored row is caught. Next: retention
+  windows + a checkpoint-aware purge (see `docs/auditforge-strategy.md`).
 
 Most `docs/` and `core/hooks/` files are still empty placeholders.
 

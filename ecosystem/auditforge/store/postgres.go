@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -11,6 +12,8 @@ import (
 	"github.com/tenantguard/tenantguard/audit"
 	tenantcontext "github.com/tenantguard/tenantguard/context"
 	"github.com/tenantguard/tenantguard/isolation"
+
+	"github.com/tenantguard/auditforge/chain"
 )
 
 // Postgres is a schema-isolated Store: each tenant's events live in their own Postgres
@@ -31,8 +34,10 @@ func NewPostgres(db *sql.DB, prefix string) *Postgres {
 	return &Postgres{db: db, strategy: isolation.SchemaStrategy{Prefix: prefix}}
 }
 
-// Append inserts e into its tenant's schema, or reports a duplicate if the eventId is
-// already present (ON CONFLICT DO NOTHING).
+// Append inserts e into its tenant's schema, extending the tenant's hash chain, or reports a
+// duplicate if the eventId is already present (ON CONFLICT DO NOTHING). The chain head is
+// read and the row inserted under an EXCLUSIVE table lock so concurrent appends cannot fork
+// the chain; that lock still admits concurrent reads (ACCESS SHARE).
 func (p *Postgres) Append(ctx context.Context, e audit.Event) (bool, error) {
 	tc, err := tenantContext(e.TenantID)
 	if err != nil {
@@ -40,6 +45,10 @@ func (p *Postgres) Append(ctx context.Context, e audit.Event) (bool, error) {
 	}
 	if err := p.ensureTenant(ctx, tc); err != nil {
 		return false, err
+	}
+	canonical, err := audit.CanonicalJSON(e)
+	if err != nil {
+		return false, fmt.Errorf("auditforge: canonicalize event %s: %w", e.EventID, err)
 	}
 	payload, err := json.Marshal(e)
 	if err != nil {
@@ -55,16 +64,35 @@ func (p *Postgres) Append(ctx context.Context, e audit.Event) (bool, error) {
 		return false, err
 	}
 
-	result, err := conn.ExecContext(ctx,
-		`INSERT INTO events (event_id, ts, event) VALUES ($1, $2, $3::jsonb)
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback() //nolint:errcheck // no-op once committed
+
+	if _, err := tx.ExecContext(ctx, `LOCK TABLE events IN EXCLUSIVE MODE`); err != nil {
+		return false, fmt.Errorf("auditforge: lock chain: %w", err)
+	}
+
+	prev := chain.Genesis
+	err = tx.QueryRowContext(ctx, `SELECT hash FROM events ORDER BY seq DESC LIMIT 1`).Scan(&prev)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return false, fmt.Errorf("auditforge: read chain head: %w", err)
+	}
+
+	result, err := tx.ExecContext(ctx,
+		`INSERT INTO events (event_id, ts, event, prev_hash, hash) VALUES ($1, $2, $3::jsonb, $4, $5)
 		 ON CONFLICT (event_id) DO NOTHING`,
-		e.EventID, e.Timestamp, string(payload))
+		e.EventID, e.Timestamp, string(payload), prev, chain.Next(prev, canonical))
 	if err != nil {
 		return false, fmt.Errorf("auditforge: insert event %s: %w", e.EventID, err)
 	}
 	affected, err := result.RowsAffected()
 	if err != nil {
 		return false, err
+	}
+	if err := tx.Commit(); err != nil {
+		return false, fmt.Errorf("auditforge: commit: %w", err)
 	}
 	return affected > 0, nil
 }
@@ -115,6 +143,50 @@ func (p *Postgres) Query(ctx context.Context, tenantID string, from, to time.Tim
 	return out, rows.Err()
 }
 
+// VerifyChain replays the tenant's hash chain in insertion (seq) order.
+func (p *Postgres) VerifyChain(ctx context.Context, tenantID string) (ChainReport, error) {
+	tc, err := tenantContext(tenantID)
+	if err != nil {
+		return ChainReport{}, err
+	}
+	if err := p.ensureTenant(ctx, tc); err != nil {
+		return ChainReport{}, err
+	}
+
+	conn, err := p.db.Conn(ctx)
+	if err != nil {
+		return ChainReport{}, err
+	}
+	defer conn.Close()
+	if err := p.strategy.Bind(ctx, conn, tc); err != nil {
+		return ChainReport{}, err
+	}
+
+	rows, err := conn.QueryContext(ctx, `SELECT event, prev_hash, hash FROM events ORDER BY seq`)
+	if err != nil {
+		return ChainReport{}, fmt.Errorf("auditforge: read chain: %w", err)
+	}
+	defer rows.Close()
+
+	var records []chainRecord
+	for rows.Next() {
+		var payload []byte
+		var prev, hash string
+		if err := rows.Scan(&payload, &prev, &hash); err != nil {
+			return ChainReport{}, fmt.Errorf("auditforge: scan chain record: %w", err)
+		}
+		var e audit.Event
+		if err := json.Unmarshal(payload, &e); err != nil {
+			return ChainReport{}, fmt.Errorf("auditforge: decode chain record: %w", err)
+		}
+		records = append(records, chainRecord{event: e, prevHash: prev, hash: hash})
+	}
+	if err := rows.Err(); err != nil {
+		return ChainReport{}, err
+	}
+	return replayChain(records), nil
+}
+
 // ensureTenant provisions the tenant's schema and events table once per process. It uses
 // the validated, injection-safe schema name and CREATE ... IF NOT EXISTS, so it is safe to
 // call before every operation.
@@ -130,9 +202,12 @@ func (p *Postgres) ensureTenant(ctx context.Context, tc tenantcontext.TenantCont
 	stmts := []string{
 		fmt.Sprintf(`CREATE SCHEMA IF NOT EXISTS %q`, schema),
 		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %q.events (
-			event_id text PRIMARY KEY,
-			ts       timestamptz NOT NULL,
-			event    jsonb NOT NULL
+			seq       bigserial PRIMARY KEY,
+			event_id  text UNIQUE NOT NULL,
+			ts        timestamptz NOT NULL,
+			event     jsonb NOT NULL,
+			prev_hash text NOT NULL,
+			hash      text NOT NULL
 		)`, schema),
 		fmt.Sprintf(`CREATE INDEX IF NOT EXISTS events_ts_idx ON %q.events (ts)`, schema),
 	}

@@ -62,14 +62,30 @@ signature verification is `rejected`, never stored.
 Tenant-scoped compliance query. The caller's tenant is resolved by TenantGuard; results are
 isolated to that tenant. `from`/`to` are RFC 3339 bounds on `timestamp`.
 
+### `GET /v1/events/chain`
+
+Tamper-evidence check for the caller's tenant (resolved by TenantGuard, so a caller can only
+verify their own chain). Replays the per-tenant hash chain and returns a report:
+`{ "length": int, "head": hash, "intact": bool, "brokenAt": eventId? }`. `brokenAt` is present
+only when `intact` is false and names the first inconsistent record.
+
 ## Storage model
 
 - **Append-only log per tenant.** Schema-based isolation (TenantGuard's default) maps each
   tenant to its own AuditForge schema.
-- **Hash chaining (tamper-evidence).** Each stored record carries
-  `prevHash` and `hash = SHA-256(prevHash || canonicalForm)`, forming a per-tenant chain an
-  auditor can replay to detect any insertion, deletion, or edit. (v1 detail; the ingest
-  contract above does not depend on it.)
+- **Hash chaining (tamper-evidence).** Each stored record carries `prevHash` and `hash`,
+  forming a per-tenant chain an auditor can replay to detect any insertion, deletion, or edit.
+  Precisely:
+  - `prevHash` is the `hash` of the immediately preceding record in the same tenant's chain,
+    or the empty string `""` (the *genesis* value) for the first record.
+  - `hash = lowercasehex( SHA-256( utf8(prevHash) ‖ canonicalForm ) )`, where `canonicalForm`
+    is the same unsigned `TenantEvent.toJson()` bytes that were signed. So the chain covers
+    exactly the content the signature attests to.
+  - Records are chained in append order per tenant; concurrent appends are serialized so the
+    chain never forks.
+  A chain is *intact* when, replaying from genesis, every record's `prevHash` equals the
+  running head and its recomputed `hash` matches the stored `hash`. Any edit, insertion, or
+  deletion surfaces as the first record whose links no longer line up.
 - **Retention.** Configurable minimum retention per regulator; deletion before expiry is
   prohibited.
 

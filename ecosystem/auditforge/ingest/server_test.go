@@ -98,6 +98,34 @@ func TestServerIngestThenTenantIsolatedQuery(t *testing.T) {
 	}
 }
 
+func TestServerChainEndpointReportsIntactChain(t *testing.T) {
+	srv := newServer(t)
+
+	post(t, srv.URL, IngestRequest{KeyID: "k1", Events: []audit.Event{
+		signedEvent(t, "acme", "a1"),
+		signedEvent(t, "acme", "a2"),
+	}})
+
+	req, _ := http.NewRequest(http.MethodGet, srv.URL+"/v1/events/chain", nil)
+	req.Header.Set("X-Tenant-ID", "acme")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("GET chain: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("chain status = %d, want 200", resp.StatusCode)
+	}
+
+	var report store.ChainReport
+	if err := json.NewDecoder(resp.Body).Decode(&report); err != nil {
+		t.Fatalf("decode report: %v", err)
+	}
+	if !report.Intact || report.Length != 2 || report.Head == "" {
+		t.Fatalf("chain report = %+v, want intact len 2 with a head", report)
+	}
+}
+
 func TestServerRejectedEventStillReturns200(t *testing.T) {
 	srv := newServer(t)
 
