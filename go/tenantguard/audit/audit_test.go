@@ -48,6 +48,46 @@ func TestEventJSONKeys(t *testing.T) {
 	}
 }
 
+func TestSignIgnoresExistingSignature(t *testing.T) {
+	e := NewEvent("tenant.resolved", "acme", "", OutcomeAllowed)
+	secret := []byte("s3cret")
+
+	unsigned, err := Sign(e, secret)
+	if err != nil {
+		t.Fatalf("Sign: %v", err)
+	}
+
+	// A stale signature on the event must not feed back into the canonical form.
+	e.Signature = "stale-signature"
+	resigned, err := Sign(e, secret)
+	if err != nil {
+		t.Fatalf("Sign: %v", err)
+	}
+	if resigned != unsigned {
+		t.Errorf("signature depends on the Signature field: %s != %s", resigned, unsigned)
+	}
+}
+
+func TestVerifyDetectsTampering(t *testing.T) {
+	e := NewEvent("db.access", "acme", "", OutcomeAllowed)
+	secret := []byte("s3cret")
+
+	sig, err := Sign(e, secret)
+	if err != nil {
+		t.Fatalf("Sign: %v", err)
+	}
+
+	if ok, _ := Verify(e, secret, sig); !ok {
+		t.Fatal("Verify rejected a valid signature")
+	}
+
+	tampered := e
+	tampered.TenantID = "evil"
+	if ok, _ := Verify(tampered, secret, sig); ok {
+		t.Error("Verify accepted a signature after the tenant id was changed")
+	}
+}
+
 func TestLoggingHookPublish(t *testing.T) {
 	if err := (LoggingHook{}).Publish(context.Background(), NewEvent("x", "acme", "", OutcomeAllowed)); err != nil {
 		t.Fatalf("LoggingHook.Publish returned error: %v", err)

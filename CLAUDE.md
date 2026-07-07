@@ -25,7 +25,9 @@ first, then port). What is real today:
     real-Postgres cross-tenant tests that skip unless `TENANTGUARD_POSTGRES_DSN` is set).
   - `propagation` — `ContextPropagator` over W3C Baggage (OpenTelemetry), for crossing
     service/queue boundaries.
-  - `audit` — `TenantEvent` + logging `Hook`.
+  - `audit` — `TenantEvent` + logging `Hook`, plus AuditForge signing (`Sign`/`Verify`/
+    `CanonicalJSON`, HMAC-SHA256 over the canonical event form; proven against the shared
+    `auditforge-signing.json` golden vectors by the conformance harness).
   - `policy` — minimal allow/deny `PolicyHook`.
   - `middleware` — the `net/http` request pipeline (resolve → immutable context → optional
     policy gate → audit), plus an `examples/httpguard` demo.
@@ -77,8 +79,10 @@ first, then port). What is real today:
   storage), `schemas/IngestRequest|IngestAck.schema.json`, and HMAC-SHA256 signing **golden
   vectors** in `testkit/compliance-tests/fixtures/auditforge-signing.json` (canonical form =
   `TenantEvent.toJson()` of the unsigned event; verified with `openssl`). Build-out plan in
-  `docs/auditforge-strategy.md`. No AuditForge code yet — clients and the ingestion service
-  are next (AuditForge will dogfood TenantGuard for its own multitenancy).
+  `docs/auditforge-strategy.md`. Phase B underway: the **Go signing client** lands in the
+  `audit` package (`Sign`/`Verify`/`CanonicalJSON`), proven against the golden vectors. Still
+  to come: the `AuditForgeHook` HTTP client, the Java/Python/TS signers, and the ingestion
+  service (AuditForge will dogfood TenantGuard for its own multitenancy).
 
 Most `docs/` and `core/hooks/` files are still empty placeholders.
 

@@ -28,10 +28,12 @@ the same fixture-driven, spec-first method that produced the four TenantGuard co
 - `testkit/compliance-tests/fixtures/auditforge-signing.json`: HMAC-SHA256 golden vectors
   over the canonical event form, independently verified.
 
-### Phase B — Signing clients (next)
+### Phase B — Signing clients (in progress)
 Turn the deferred Ring-5 `AuditHook` stub into a real signer in each TenantGuard language:
 - a `sign(event, secret) -> hex` function proven against `auditforge-signing.json` (add a
   case to each language's conformance harness — a pure, DB-free, network-free vector test);
+  **Go done** — `audit.Sign`/`Verify`/`CanonicalJSON` (`go/tenantguard/audit/signing.go`),
+  proven by `TestAuditForgeSigningFixtures` against both golden vectors.
 - an `AuditForgeHook implements AuditHook` that signs each event and POSTs an `IngestRequest`
   to `/v1/events`, with retry/backoff and the `keyId` header.
 - Start in Go (reference), then Java/Python/TS. Each only needs an HMAC primitive + an HTTP
@@ -52,8 +54,9 @@ Turn the deferred Ring-5 `AuditHook` stub into a real signer in each TenantGuard
   form, asymmetric algorithm) for non-repudiation.
 
 ## First three concrete steps
-1. Add a `sign()` + `auditforge-signing.json` conformance test to the Go audit package
-   (proves the golden vectors against real code).
+1. ~~Add a `sign()` + `auditforge-signing.json` conformance test to the Go audit package
+   (proves the golden vectors against real code).~~ **Done** — `audit.Sign`/`Verify`/
+   `CanonicalJSON` + `TestAuditForgeSigningFixtures`.
 2. Implement `AuditForgeHook` (Go) that signs + POSTs an `IngestRequest`.
 3. Stand up the Go ingestion service skeleton with signature verification, tested against the
    same golden vectors from the verifier's side.

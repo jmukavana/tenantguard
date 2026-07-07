@@ -268,6 +268,61 @@ func TestTenantEventFixtures(t *testing.T) {
 	}
 }
 
+func TestAuditForgeSigningFixtures(t *testing.T) {
+	var file struct {
+		Secret string `json:"secret"`
+		Cases  []struct {
+			Name      string      `json:"name"`
+			Event     audit.Event `json:"event"`
+			Canonical string      `json:"canonical"`
+			Signature string      `json:"signature"`
+		} `json:"cases"`
+	}
+	b, err := os.ReadFile(filepath.Join(fixturesDir, "auditforge-signing.json"))
+	if err != nil {
+		t.Fatalf("read fixture: %v", err)
+	}
+	if err := json.Unmarshal(b, &file); err != nil {
+		t.Fatalf("parse fixture: %v", err)
+	}
+
+	secret := []byte(file.Secret)
+	for _, c := range file.Cases {
+		t.Run(c.Name, func(t *testing.T) {
+			// The canonical bytes are checked separately from the HMAC so a mismatch
+			// localizes to serialization vs. the signing primitive.
+			canonical, err := audit.CanonicalJSON(c.Event)
+			if err != nil {
+				t.Fatalf("CanonicalJSON: %v", err)
+			}
+			if string(canonical) != c.Canonical {
+				t.Errorf("canonical form mismatch:\n got %s\nwant %s", canonical, c.Canonical)
+			}
+
+			sig, err := audit.Sign(c.Event, secret)
+			if err != nil {
+				t.Fatalf("Sign: %v", err)
+			}
+			if sig != c.Signature {
+				t.Errorf("signature = %s, want %s", sig, c.Signature)
+			}
+
+			ok, err := audit.Verify(c.Event, secret, c.Signature)
+			if err != nil {
+				t.Fatalf("Verify: %v", err)
+			}
+			if !ok {
+				t.Error("Verify rejected the golden signature")
+			}
+
+			// A tampered secret must not verify.
+			if ok, _ := audit.Verify(c.Event, []byte("wrong-secret"), c.Signature); ok {
+				t.Error("Verify accepted a signature under the wrong secret")
+			}
+		})
+	}
+}
+
 func TestPropagationBaggageFixtures(t *testing.T) {
 	var cases []struct {
 		Name    string `json:"name"`
