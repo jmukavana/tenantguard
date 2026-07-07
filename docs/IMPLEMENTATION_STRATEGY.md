@@ -65,13 +65,19 @@ Postgres → audit event to a logging AuditHook**, joined by one `net/http` midd
 - **Gate:** an integration test (testcontainers-go + Postgres) showing tenant A cannot read
   tenant B's rows, and an audit event is emitted per request.
 
-### Phase 2 — Propagation & completeness (Go)
-- `propagation/`: `ContextPropagator` over W3C Baggage + OpenTelemetry Trace Context
-  (`go.opentelemetry.io/otel`), covering HTTP out-calls, goroutines, and MQ headers.
-- Additional resolvers (JWT claim, subdomain) and isolation strategies (Row-Level Security,
-  Database-per-Tenant) behind the same interfaces.
-- `policy/`: minimal `PolicyHook` (allow/deny decision object) — full engine is post-v1.0.
-- **Gate:** Go reference is spec-complete; `go test ./... -v` green (matches CI).
+### Phase 2 — Propagation & completeness (Go) — DONE (partial)
+- `propagation/`: `ContextPropagator` carrying tenant identity as W3C Baggage members
+  (`tg.*`) via `go.opentelemetry.io/otel`; works over any `TextMapCarrier` (HTTP/MQ). Full
+  trace-context (traceparent) integration lands with the OTel SDK in the telemetry package.
+- `resolver/`: added `SubdomainResolver`. **Deferred:** JWT-claim resolver — extracting a
+  claim safely requires signature verification / key management; shipping an unverified
+  variant in a regulated framework is a foot-gun, so it waits for that infra.
+- `isolation/`: added `RowLevelStrategy` (Postgres RLS via a `set_config` session
+  parameter, proven with a real RLS integration test). **Deferred:** Database-per-Tenant —
+  needs a connection-routing/pooling design, not just a query hook.
+- `policy/`: minimal `PolicyHook` (allow/deny `Decision`), wired into the middleware as an
+  optional 403 gate. Full engine is post-v1.0.
+- **Gate:** `go test ./...` green; both isolation strategies verified against real Postgres.
 
 ### Phase 3 — Lock the contract
 - Extract behavior into language-neutral fixtures under `testkit/compliance-tests/`:

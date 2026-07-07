@@ -18,10 +18,21 @@ first, then port). What is real today:
 - `core/spec.md` — the language-neutral core specification (the design source of truth).
 - `core/schemas/TenantContext.schema.json`, `TenantEvent.schema.json` — the cross-language
   data contracts (other schemas are still empty stubs).
-- **Go, Phase 0 + Phase 1 vertical slice** under `go/tenantguard/`: `context` (immutable
-  `TenantContext`), `resolver` (HTTP header), `isolation` (schema-based Postgres), `audit`
-  (event + logging hook), `middleware` (the request pipeline), and an `examples/httpguard`
-  demo. All tested; `go test ./...` is green.
+- **Go, Phases 0–2** under `go/tenantguard/`:
+  - `context` — immutable `TenantContext`.
+  - `resolver` — HTTP header + subdomain resolvers.
+  - `isolation` — schema-based and Row-Level-Security Postgres strategies (both proven by
+    real-Postgres cross-tenant tests that skip unless `TENANTGUARD_POSTGRES_DSN` is set).
+  - `propagation` — `ContextPropagator` over W3C Baggage (OpenTelemetry), for crossing
+    service/queue boundaries.
+  - `audit` — `TenantEvent` + logging `Hook`.
+  - `policy` — minimal allow/deny `PolicyHook`.
+  - `middleware` — the `net/http` request pipeline (resolve → immutable context → optional
+    policy gate → audit), plus an `examples/httpguard` demo.
+  - All tested; `go test ./...` green. Depends on `github.com/lib/pq` (integration tests)
+    and `go.opentelemetry.io/otel` (baggage propagation).
+  - Not yet implemented: JWT-claim resolver (needs signature-verification infra) and
+    Database-per-Tenant isolation (needs connection routing) — deliberately deferred.
 - `README.md`, `ROADMAP.MD`, `docs/IMPLEMENTATION_STRATEGY.md`, `.github/workflows/ci-go.yml`.
 
 The `java/`, `python/`, and `typescript/` build files (`pom.xml`, `pyproject.toml`,

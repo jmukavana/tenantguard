@@ -9,6 +9,7 @@ import (
 
 	"github.com/tenantguard/tenantguard/audit"
 	tenantcontext "github.com/tenantguard/tenantguard/context"
+	"github.com/tenantguard/tenantguard/policy"
 	"github.com/tenantguard/tenantguard/resolver"
 )
 
@@ -103,6 +104,51 @@ func TestGuard_RejectsTenantSwitch(t *testing.T) {
 	}
 	if len(hook.events) != 1 || hook.events[0].EventType != "tenant.switch.rejected" {
 		t.Fatalf("expected switch.rejected event, got %+v", hook.events)
+	}
+}
+
+func TestGuard_PolicyDeny(t *testing.T) {
+	hook := &recordingHook{}
+	reached := false
+	next := http.HandlerFunc(func(http.ResponseWriter, *http.Request) { reached = true })
+
+	deny := policy.HookFunc(func(_ context.Context, tc tenantcontext.TenantContext, action string) policy.Decision {
+		return policy.Deny("not permitted: " + action)
+	})
+
+	req := httptest.NewRequest("GET", "/orders", nil)
+	req.Header.Set(resolver.DefaultHeader, "acme")
+	rec := httptest.NewRecorder()
+
+	Guard{Resolver: resolver.HeaderResolver{}, Audit: hook, Policy: deny}.Handler(next).ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want 403", rec.Code)
+	}
+	if reached {
+		t.Fatal("downstream handler must not run when policy denies")
+	}
+	if len(hook.events) != 1 || hook.events[0].EventType != "policy.denied" {
+		t.Fatalf("expected policy.denied event, got %+v", hook.events)
+	}
+	if got := hook.events[0].Metadata["reason"]; got != "not permitted: GET /orders" {
+		t.Fatalf("reason = %q", got)
+	}
+}
+
+func TestGuard_PolicyAllow(t *testing.T) {
+	reached := false
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reached = true
+		w.WriteHeader(http.StatusOK)
+	})
+	req := httptest.NewRequest("GET", "/orders", nil)
+	req.Header.Set(resolver.DefaultHeader, "acme")
+	rec := httptest.NewRecorder()
+
+	Guard{Resolver: resolver.HeaderResolver{}, Policy: policy.AllowAll}.Handler(next).ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK || !reached {
+		t.Fatalf("AllowAll should permit: code=%d reached=%v", rec.Code, reached)
 	}
 }
 

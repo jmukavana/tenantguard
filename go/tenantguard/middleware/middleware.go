@@ -11,6 +11,7 @@ import (
 
 	"github.com/tenantguard/tenantguard/audit"
 	tenantcontext "github.com/tenantguard/tenantguard/context"
+	"github.com/tenantguard/tenantguard/policy"
 	"github.com/tenantguard/tenantguard/resolver"
 )
 
@@ -45,6 +46,9 @@ type Guard struct {
 	Resolver resolver.Resolver
 	// Audit receives an event per request. Optional; nil disables auditing.
 	Audit audit.Hook
+	// Policy, when set, gates each resolved request. A denied Decision yields 403.
+	// The action passed to the hook is "METHOD path". Optional; nil allows all.
+	Policy policy.Hook
 }
 
 // Handler returns middleware that guards next. Requests without a resolvable tenant get
@@ -64,6 +68,17 @@ func (g Guard) Handler(next http.Handler) http.Handler {
 			g.publish(r.Context(), audit.NewEvent("tenant.switch.rejected", tc.TenantID(), tc.TraceID(), audit.OutcomeDenied))
 			http.Error(w, "tenant switch rejected", http.StatusConflict)
 			return
+		}
+
+		if g.Policy != nil {
+			if d := g.Policy.Evaluate(ctx, tc, r.Method+" "+r.URL.Path); !d.Allowed {
+				e := audit.NewEvent("policy.denied", tc.TenantID(), tc.TraceID(), audit.OutcomeDenied)
+				e.Resource = r.URL.Path
+				e.Metadata = map[string]string{"reason": d.Reason}
+				g.publish(ctx, e)
+				http.Error(w, "forbidden", http.StatusForbidden)
+				return
+			}
 		}
 
 		g.publish(ctx, audit.NewEvent("tenant.resolved", tc.TenantID(), tc.TraceID(), audit.OutcomeAllowed))
