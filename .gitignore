@@ -1,2 +1,29 @@
+# IDE
 .idea/
 *.iml
+.vscode/
+
+# Go
+/go/**/bin/
+*.test
+*.out
+
+# Java
+target/
+*.class
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Node / TypeScript
+node_modules/
+dist/
+*.tsbuildinfo
+
+# OS
+.DS_Store
