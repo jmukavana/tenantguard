@@ -20,8 +20,11 @@ export type { HttpRequestView, TenantResolver } from "./resolver/index.js";
 export { IsolationError, SchemaStrategy, UNSAFE_TENANT_ID } from "./isolation/index.js";
 export type { QueryRunner } from "./isolation/index.js";
 
-export { LoggingAuditHook, TenantEvent } from "./audit/index.js";
+export { LoggingAuditHook, TenantEvent, canonicalJson, sign, verify } from "./audit/index.js";
 export type { AuditHook, Outcome, TenantEventInit } from "./audit/index.js";
+
+export { AuditForgeError, AuditForgeHook } from "./audit/auditforge.js";
+export type { AuditForgeHookOptions } from "./audit/auditforge.js";
 
 export { Propagator } from "./propagation/index.js";
 export type { Carrier } from "./propagation/index.js";

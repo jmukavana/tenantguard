@@ -87,8 +87,12 @@ first, then port). What is real today:
   `auditforge.Hook` (`go/tenantguard/audit/auditforge/`), an `audit.Hook` that signs each
   event and POSTs a one-event `IngestRequest` to `/v1/events` (idempotent on `duplicate`,
   errors on `rejected`/unacknowledged, retries 5xx + network errors with backoff; tested
-  against a fake AuditForge that verifies the signature). Still to come: the Java/Python/TS
-  delivery clients and the ingestion service (AuditForge will dogfood TenantGuard).
+  against a fake AuditForge that verifies the signature). The **delivery client is now in all
+  four languages** — Java `auditforge.AuditForgeHook` (`java.net.http`; `internal.Json` gained
+  a general value parser for the `IngestAck`), Python `tenantguard.audit.auditforge`
+  (`urllib`), TS `AuditForgeHook` (`fetch`) — same semantics, each stdlib-only and tested
+  against an in-process fake AuditForge. Still to come: the ingestion service (Phase C), which
+  will dogfood TenantGuard for its own multitenancy.
 
 Most `docs/` and `core/hooks/` files are still empty placeholders.
 

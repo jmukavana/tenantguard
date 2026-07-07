@@ -38,12 +38,13 @@ Turn the deferred Ring-5 `AuditHook` stub into a real signer in each TenantGuard
   harness proves both golden vectors (canonical bytes and HMAC checked separately). Every
   signer is stdlib-only (HMAC-SHA256 + hex).
 - an `AuditForgeHook implements AuditHook` that signs each event and POSTs an `IngestRequest`
-  to `/v1/events`, with retry/backoff and the `keyId`. **Go done** — `auditforge.Hook`
-  (`go/tenantguard/audit/auditforge/`): signs, POSTs a one-event batch, treats a `duplicate`
-  ack as idempotent success and a `rejected`/unacknowledged event as an error, retries 5xx and
-  network errors (not 4xx) with exponential backoff. Java/Python/TS next.
-- Start in Go (reference), then Java/Python/TS. Each only needs an HMAC primitive + an HTTP
-  client — both in every standard library.
+  to `/v1/events`, with retry/backoff and the `keyId`. **Done in all four languages** — Go
+  `auditforge.Hook`, Java `auditforge.AuditForgeHook` (`java.net.http`), Python
+  `tenantguard.audit.auditforge.AuditForgeHook` (`urllib`), TS `AuditForgeHook` (`fetch`).
+  Each signs, POSTs a one-event batch, treats a `duplicate` ack as idempotent success and a
+  `rejected`/unacknowledged event as an error, and retries 5xx + network errors (not 4xx) with
+  exponential backoff. Every client is stdlib-only (HMAC + an HTTP client) and is tested
+  against an in-process fake AuditForge that verifies the signature it receives.
 
 ### Phase C — Ingestion service (Go)
 - `POST /v1/events`: verify each event's signature (recompute canonical form, HMAC, constant
