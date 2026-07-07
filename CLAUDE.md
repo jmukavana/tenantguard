@@ -51,14 +51,14 @@ first, then port). What is real today:
   servlet/Spring middleware and JPA/JDBC adapters are not built yet; the multi-module split
   (`tenantguard-core`, `tenantguard-jpa`, ...) is a later refactor.
 
-- **Python, Rings 0–2** under `python/` (`pyproject.toml`, Python 3.10+; package `tenantguard`):
-  immutable `TenantContext` (frozen dataclass, read-only `MappingProxyType` metadata);
-  `resolver.HeaderResolver` + `SubdomainResolver` over an `HttpRequestView` Protocol (returning
-  `None` for `no_tenant`); `isolation.SchemaStrategy` (schema naming + injection rejection,
-  DB-API `bind`); `audit.TenantEvent` (`to_json` via stdlib `json`, canonical shape) +
-  `AuditHook`/`LoggingAuditHook`. Errors carry the same symbolic codes. The pytest harness
-  passes 5 of 6 shared fixture groups (all but propagation). `cd python && python -m pytest -q`
-  green; core has no runtime deps; CI wired (`ci-python.yml`). Propagation not built yet.
+- **Python core (full fixture parity with Go & Java)** under `python/` (`pyproject.toml`,
+  Python 3.10+; package `tenantguard`): immutable `TenantContext` (frozen dataclass, read-only
+  `MappingProxyType` metadata); `resolver.HeaderResolver` + `SubdomainResolver` over an
+  `HttpRequestView` Protocol; `isolation.SchemaStrategy` (schema naming + injection rejection,
+  DB-API `bind`); `audit.TenantEvent` (`to_json` via stdlib `json`) + `AuditHook`; and
+  `propagation.Propagator` over W3C Baggage (`opentelemetry-api`, the one runtime dep). The
+  pytest harness passes **all 6** shared fixture groups. `cd python && python -m pytest -q`
+  green (needs `pip install pytest opentelemetry-api`); CI wired (`ci-python.yml`).
 
 The `typescript/` build file (`package.json`) is still an **empty stub** — no code there yet.
 Most `docs/` and `core/hooks/` files are empty placeholders.

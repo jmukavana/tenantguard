@@ -14,7 +14,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: pip install pytest
+      - run: pip install pytest opentelemetry-api
       # The conformance harness reads testkit/compliance-tests/fixtures, which the full
       # checkout provides; _fixtures.fixtures_dir() walks up from python/ to find it.
       - run: cd python && python -m pytest -q

@@ -8,7 +8,8 @@ version = "0.1.0"
 description = "Python reference implementation of the TenantGuard core (see core/spec.md)."
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
-# The core has no runtime dependencies. opentelemetry-api joins later, with propagation.
+# The only runtime dependency: OpenTelemetry Baggage, the propagation substrate.
+dependencies = ["opentelemetry-api>=1.20"]
 
 [project.optional-dependencies]
 test = ["pytest>=7"]
