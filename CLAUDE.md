@@ -51,12 +51,13 @@ first, then port). What is real today:
   servlet/Spring middleware and JPA/JDBC adapters are not built yet; the multi-module split
   (`tenantguard-core`, `tenantguard-jpa`, ...) is a later refactor.
 
-- **Python, Ring 0** under `python/` (`pyproject.toml`, Python 3.10+; package `tenantguard`):
+- **Python, Rings 0–1** under `python/` (`pyproject.toml`, Python 3.10+; package `tenantguard`):
   immutable `TenantContext` as a frozen dataclass with metadata exposed as a read-only
-  `MappingProxyType` over a defensive copy; `TenantContextError` carries the same symbolic
-  codes. A pytest conformance harness (`python/tests/`) reads the shared `tenant-context.json`
-  fixture. `cd python && python -m pytest -q` green. Core has no runtime deps; CI wired
-  (`ci-python.yml`). Rings 1+ not built yet.
+  `MappingProxyType` over a defensive copy; `resolver.HeaderResolver` + `SubdomainResolver`
+  over an `HttpRequestView` Protocol (returning `None` for `no_tenant`); `TenantContextError`
+  carries the same symbolic codes. A pytest conformance harness (`python/tests/`) reads the
+  shared `tenant-context` + `resolver-*` fixtures. `cd python && python -m pytest -q` green.
+  Core has no runtime deps; CI wired (`ci-python.yml`). Ring 2+ not built yet.
 
 The `typescript/` build file (`package.json`) is still an **empty stub** — no code there yet.
 Most `docs/` and `core/hooks/` files are empty placeholders.
