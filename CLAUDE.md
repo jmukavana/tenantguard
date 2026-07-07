@@ -60,13 +60,15 @@ first, then port). What is real today:
   pytest harness passes **all 6** shared fixture groups. `cd python && python -m pytest -q`
   green (needs `pip install pytest opentelemetry-api`); CI wired (`ci-python.yml`).
 
-- **TypeScript, Ring 0** under `typescript/` (`@tenantguard/core`, ESM, Node ≥18): immutable
+- **TypeScript, Rings 0–1** under `typescript/` (`@tenantguard/core`, ESM, Node ≥18): immutable
   `TenantContext` (a class frozen via `Object.freeze`, with a frozen defensive copy of
-  metadata); `TenantContextError` carries the same symbolic codes. A Vitest conformance
-  harness (`typescript/test/`) reads the shared `tenant-context.json` fixture.
-  `cd typescript && npm ci && npm test` green (also `npm run typecheck`). Core has no runtime
-  deps (TypeScript/Vitest are dev-only); CI wired (`ci-typescript.yml`). Rings 1+ not built
-  yet. Relative imports use `.js` extensions (NodeNext ESM); Vitest resolves them to `.ts`.
+  metadata); `resolver.HeaderResolver` + `SubdomainResolver` over an `HttpRequestView`
+  interface (returning `null` for `no_tenant`); `TenantContextError` carries the same symbolic
+  codes. A Vitest conformance harness (`typescript/test/`) reads the shared `tenant-context` +
+  `resolver-*` fixtures. `cd typescript && npm ci && npm test` green (also `npm run typecheck`).
+  Core has no runtime deps (TypeScript/Vitest are dev-only); CI wired (`ci-typescript.yml`).
+  Ring 2+ not built yet. Relative imports use `.js` extensions (NodeNext ESM); Vitest resolves
+  them to `.ts`.
 
 Most `docs/` and `core/hooks/` files are still empty placeholders.
 
