@@ -8,6 +8,8 @@ import (
 	"github.com/tenantguard/tenantguard/audit"
 )
 
+var checkpointSecret = []byte("auditforge-checkpoint-key")
+
 func event(tenantID, eventID string, at time.Time) audit.Event {
 	e := audit.NewEvent("tenant.resolved", tenantID, "", audit.OutcomeAllowed)
 	e.EventID = eventID
@@ -16,7 +18,7 @@ func event(tenantID, eventID string, at time.Time) audit.Event {
 }
 
 func TestAppendIsIdempotentPerTenant(t *testing.T) {
-	m := NewMemory()
+	m := NewMemory(checkpointSecret)
 	ctx := context.Background()
 	now := time.Now().UTC()
 
@@ -36,7 +38,7 @@ func TestAppendIsIdempotentPerTenant(t *testing.T) {
 }
 
 func TestQueryIsolatesTenants(t *testing.T) {
-	m := NewMemory()
+	m := NewMemory(checkpointSecret)
 	ctx := context.Background()
 	now := time.Now().UTC()
 	_, _ = m.Append(ctx, event("acme", "a1", now))
@@ -49,7 +51,7 @@ func TestQueryIsolatesTenants(t *testing.T) {
 }
 
 func TestMemoryChainIsIntactAndAdvances(t *testing.T) {
-	m := NewMemory()
+	m := NewMemory(checkpointSecret)
 	ctx := context.Background()
 	now := time.Now().UTC()
 
@@ -76,8 +78,77 @@ func TestMemoryChainIsIntactAndAdvances(t *testing.T) {
 	}
 }
 
+func TestMemoryPurgeCheckpointsAndKeepsTailVerifiable(t *testing.T) {
+	m := NewMemory(checkpointSecret)
+	ctx := context.Background()
+	base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	m.Append(ctx, event("acme", "e1", base))
+	m.Append(ctx, event("acme", "e2", base.Add(time.Hour)))
+	m.Append(ctx, event("acme", "e3", base.Add(2*time.Hour)))
+
+	res, err := m.Purge(ctx, "acme", base.Add(90*time.Minute))
+	if err != nil {
+		t.Fatalf("purge: %v", err)
+	}
+	if res.Purged != 2 {
+		t.Fatalf("purged %d, want 2 (e1, e2)", res.Purged)
+	}
+
+	// Purged events vanish from queries; e3 remains.
+	got, _ := m.Query(ctx, "acme", time.Time{}, time.Time{})
+	if len(got) != 1 || got[0].EventID != "e3" {
+		t.Fatalf("query after purge = %+v, want [e3]", got)
+	}
+
+	// The surviving tail still verifies, replayed from the checkpoint.
+	report, _ := m.VerifyChain(ctx, "acme")
+	if !report.Intact || report.Length != 3 || report.Purged != 2 {
+		t.Fatalf("post-purge report = %+v, want intact len 3 purged 2", report)
+	}
+
+	// Redelivering a purged event must not resurrect it.
+	if stored, _ := m.Append(ctx, event("acme", "e1", base)); stored {
+		t.Error("a purged event was resurrected on redelivery")
+	}
+}
+
+func TestMemoryPurgeHonorsRetentionWindow(t *testing.T) {
+	m := NewMemory(checkpointSecret)
+	ctx := context.Background()
+	base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	m.Append(ctx, event("acme", "e1", base))
+	m.Append(ctx, event("acme", "e2", base.Add(time.Hour)))
+
+	// A cutoff before everything removes nothing.
+	if res, _ := m.Purge(ctx, "acme", base.Add(-time.Hour)); res.Purged != 0 {
+		t.Fatalf("purged %d, want 0 when nothing is old enough", res.Purged)
+	}
+	if r, _ := m.VerifyChain(ctx, "acme"); r.Purged != 0 || r.Length != 2 {
+		t.Fatalf("report = %+v, want purged 0 len 2", r)
+	}
+}
+
+func TestMemoryVerifyDetectsForgedCheckpoint(t *testing.T) {
+	m := NewMemory(checkpointSecret)
+	ctx := context.Background()
+	base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	m.Append(ctx, event("acme", "e1", base))
+	m.Append(ctx, event("acme", "e2", base.Add(time.Hour)))
+	m.Purge(ctx, "acme", base.Add(30*time.Minute)) // purges e1
+
+	// Forge the checkpoint to claim nothing was purged, hiding e1's removal.
+	cp := m.checkpoints["acme"]
+	cp.Length = 0
+	m.checkpoints["acme"] = cp
+
+	report, _ := m.VerifyChain(ctx, "acme")
+	if report.Intact || report.BrokenAt != "checkpoint" {
+		t.Fatalf("forged checkpoint not detected: %+v", report)
+	}
+}
+
 func TestQueryFiltersByTimeBounds(t *testing.T) {
-	m := NewMemory()
+	m := NewMemory(checkpointSecret)
 	ctx := context.Background()
 	base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	_, _ = m.Append(ctx, event("acme", "old", base))

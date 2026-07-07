@@ -6,7 +6,9 @@ package ingest
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/tenantguard/tenantguard/audit"
 
@@ -43,10 +45,26 @@ type IngestAck struct {
 	Rejected  []Rejection `json:"rejected"`
 }
 
+// ErrRetentionDisabled is returned by Purge when no retention window is configured.
+var ErrRetentionDisabled = errors.New("auditforge: retention purge is disabled")
+
 // Service verifies and stores audit events.
 type Service struct {
 	Keys  keyring.Keyring
 	Store store.Store
+	// Retention is the minimum time events are kept. Purge removes only records older than
+	// this window; zero disables purging entirely. Deletion is never exposed over HTTP.
+	Retention time.Duration
+}
+
+// Purge enforces the retention window for a tenant: it removes records older than Retention
+// and returns the resulting signed checkpoint. It is an operator/scheduler entry point, not
+// part of the public API, so AuditForge never deletes in response to a request.
+func (s Service) Purge(ctx context.Context, tenantID string) (store.PurgeResult, error) {
+	if s.Retention <= 0 {
+		return store.PurgeResult{}, ErrRetentionDisabled
+	}
+	return s.Store.Purge(ctx, tenantID, time.Now().Add(-s.Retention))
 }
 
 // Ingest verifies each event and stores the valid, new ones, returning an ack partitioning

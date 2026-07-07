@@ -3,6 +3,7 @@ package store_test
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -13,6 +14,8 @@ import (
 
 	"github.com/tenantguard/auditforge/store"
 )
+
+var checkpointSecret = []byte("auditforge-checkpoint-key")
 
 // TestPostgresStore_IdempotencyAndIsolation is the Phase C gate: against a real Postgres it
 // proves an event is stored once (idempotent on redelivery) and that one tenant's events are
@@ -42,7 +45,7 @@ func TestPostgresStore_IdempotencyAndIsolation(t *testing.T) {
 	dropSchemas(t, db)
 	defer dropSchemas(t, db)
 
-	pg := store.NewPostgres(db, "tenant_")
+	pg := store.NewPostgres(db, "tenant_", checkpointSecret)
 	base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	// First append stores; redelivering the same eventId is an idempotent no-op.
@@ -113,7 +116,7 @@ func TestPostgresStore_ChainTamperEvidence(t *testing.T) {
 	dropSchemas(t, db)
 	defer dropSchemas(t, db)
 
-	pg := store.NewPostgres(db, "tenant_")
+	pg := store.NewPostgres(db, "tenant_", checkpointSecret)
 	base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	if _, err := pg.Append(ctx, event("acme", "a1", "tenant.resolved", base)); err != nil {
 		t.Fatalf("append a1: %v", err)
@@ -142,6 +145,65 @@ func TestPostgresStore_ChainTamperEvidence(t *testing.T) {
 	}
 	if broken.Intact || broken.BrokenAt != "a1" {
 		t.Fatalf("tampered chain = %+v, want broken at a1", broken)
+	}
+}
+
+// TestPostgresStore_RetentionPurge proves retention purging against a real Postgres: old
+// records are removed, the surviving tail still verifies from a signed checkpoint, appends
+// continue the chain, and forging the checkpoint row is detected.
+func TestPostgresStore_RetentionPurge(t *testing.T) {
+	dsn := os.Getenv("TENANTGUARD_POSTGRES_DSN")
+	if dsn == "" {
+		t.Skip("set TENANTGUARD_POSTGRES_DSN to run the Postgres retention test")
+	}
+
+	ctx := context.Background()
+	db, err := sql.Open("postgres", dsn)
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	defer db.Close()
+
+	dropSchemas(t, db)
+	defer dropSchemas(t, db)
+
+	pg := store.NewPostgres(db, "tenant_", checkpointSecret)
+	base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	for i, at := range []time.Time{base, base.Add(time.Hour), base.Add(2 * time.Hour)} {
+		if _, err := pg.Append(ctx, event("acme", fmt.Sprintf("e%d", i+1), "tenant.resolved", at)); err != nil {
+			t.Fatalf("append e%d: %v", i+1, err)
+		}
+	}
+
+	// Purge the two events at or older than base+90m (e1, e2); e3 survives.
+	res, err := pg.Purge(ctx, "acme", base.Add(90*time.Minute))
+	if err != nil {
+		t.Fatalf("purge: %v", err)
+	}
+	if res.Purged != 2 {
+		t.Fatalf("purged %d, want 2", res.Purged)
+	}
+	if got, _ := pg.Query(ctx, "acme", time.Time{}, time.Time{}); len(got) != 1 || got[0].EventID != "e3" {
+		t.Fatalf("query after purge = %+v, want [e3]", got)
+	}
+
+	// The tail verifies from the checkpoint, and appends keep extending the same chain.
+	if r, _ := pg.VerifyChain(ctx, "acme"); !r.Intact || r.Length != 3 || r.Purged != 2 {
+		t.Fatalf("post-purge chain = %+v, want intact len 3 purged 2", r)
+	}
+	if _, err := pg.Append(ctx, event("acme", "e4", "policy.denied", base.Add(3*time.Hour))); err != nil {
+		t.Fatalf("append e4: %v", err)
+	}
+	if r, _ := pg.VerifyChain(ctx, "acme"); !r.Intact || r.Length != 4 {
+		t.Fatalf("chain after post-purge append = %+v, want intact len 4", r)
+	}
+
+	// Forging the checkpoint row (to hide the purge) must be detected.
+	if _, err := db.ExecContext(ctx, `UPDATE tenant_acme.chain_checkpoint SET length = 1`); err != nil {
+		t.Fatalf("tamper checkpoint: %v", err)
+	}
+	if r, _ := pg.VerifyChain(ctx, "acme"); r.Intact || r.BrokenAt != "checkpoint" {
+		t.Fatalf("forged checkpoint not detected: %+v", r)
 	}
 }
 

@@ -30,7 +30,7 @@ func signedEvent(t *testing.T, tenantID, eventID string) audit.Event {
 
 func newServer(t *testing.T) *httptest.Server {
 	t.Helper()
-	svc := Service{Keys: keyring.Map{"k1": serverSecret}, Store: store.NewMemory()}
+	svc := Service{Keys: keyring.Map{"k1": serverSecret}, Store: store.NewMemory(checkpointSecret)}
 	srv := httptest.NewServer(svc.Handler())
 	t.Cleanup(srv.Close)
 	return srv

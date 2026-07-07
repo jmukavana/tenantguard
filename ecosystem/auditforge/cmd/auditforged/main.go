@@ -2,9 +2,10 @@
 // This skeleton uses the in-memory store; the Postgres, schema-isolated backend is the next
 // step. Configuration comes from the environment:
 //
-//	AUDITFORGE_ADDR       listen address (default ":8080")
-//	AUDITFORGE_KEY_ID     the single signing key's id (default "default")
-//	AUDITFORGE_SECRET     that key's shared secret (required)
+//	AUDITFORGE_ADDR                listen address (default ":8080")
+//	AUDITFORGE_KEY_ID              the single signing key's id (default "default")
+//	AUDITFORGE_SECRET              that key's shared secret (required)
+//	AUDITFORGE_CHECKPOINT_SECRET   key for signing retention checkpoints (default: the secret)
 package main
 
 import (
@@ -24,10 +25,11 @@ func main() {
 	}
 	keyID := envOr("AUDITFORGE_KEY_ID", "default")
 	addr := envOr("AUDITFORGE_ADDR", ":8080")
+	checkpointSecret := []byte(envOr("AUDITFORGE_CHECKPOINT_SECRET", secret))
 
 	service := ingest.Service{
 		Keys:  keyring.Map{keyID: []byte(secret)},
-		Store: store.NewMemory(),
+		Store: store.NewMemory(checkpointSecret),
 	}
 
 	log.Printf("auditforge: listening on %s (in-memory store, key %q)", addr, keyID)

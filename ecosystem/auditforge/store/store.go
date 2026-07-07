@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/tenantguard/tenantguard/audit"
+
+	"github.com/tenantguard/auditforge/chain"
 )
 
 // Store persists verified audit events and answers tenant-scoped queries. Implementations
@@ -20,18 +22,36 @@ type Store interface {
 	// Query returns tenantID's events whose timestamp falls within [from, to], oldest first.
 	// A zero from or to is unbounded on that side.
 	Query(ctx context.Context, tenantID string, from, to time.Time) ([]audit.Event, error)
-	// VerifyChain replays the tenant's hash chain and reports whether it is intact.
+	// VerifyChain replays the tenant's hash chain (from its retention checkpoint, if any)
+	// and reports whether it is intact.
 	VerifyChain(ctx context.Context, tenantID string) (ChainReport, error)
+	// Purge removes the leading run of the tenant's records at or older than olderThan and
+	// records a signed checkpoint so the surviving tail still verifies. Records newer than
+	// olderThan are never removed, so a retention window is honored.
+	Purge(ctx context.Context, tenantID string, olderThan time.Time) (PurgeResult, error)
 }
 
 // ChainReport is the outcome of replaying a tenant's tamper-evident chain.
 type ChainReport struct {
-	// Length is the number of records in the chain.
+	// Length is the total number of records the chain has held, including any purged prefix.
 	Length int `json:"length"`
-	// Head is the hash of the last record, or chain.Genesis for an empty chain.
+	// Head is the hash of the last record, the checkpoint hash for a fully purged chain, or
+	// chain.Genesis for an empty chain.
 	Head string `json:"head"`
-	// Intact is true when every record's prevHash and recomputed hash line up.
+	// Intact is true when the checkpoint (if any) verifies and every surviving record's
+	// prevHash and recomputed hash line up.
 	Intact bool `json:"intact"`
-	// BrokenAt is the eventId of the first inconsistent record when Intact is false.
+	// Purged is the number of records represented by the retention checkpoint.
+	Purged int `json:"purged"`
+	// BrokenAt is the eventId of the first inconsistent record when Intact is false, or
+	// "checkpoint" when the retention checkpoint itself fails to verify.
 	BrokenAt string `json:"brokenAt,omitempty"`
+}
+
+// PurgeResult reports the outcome of a retention purge.
+type PurgeResult struct {
+	// Purged is the number of records removed by this call.
+	Purged int `json:"purged"`
+	// Checkpoint is the signed checkpoint now in effect (zero-valued if none exists).
+	Checkpoint chain.Checkpoint `json:"checkpoint"`
 }

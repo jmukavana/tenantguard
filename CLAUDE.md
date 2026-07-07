@@ -110,8 +110,13 @@ first, then port). What is real today:
   (`hash = SHA-256(prevHash ‖ canonicalForm)`, genesis `""`; golden-vector tested), both
   stores link records and expose `VerifyChain` (Postgres appends under an `EXCLUSIVE` lock so
   the chain can't fork), and `GET /v1/events/chain` reports intact/broken for the caller's
-  tenant — a real-Postgres test proves an edit to a stored row is caught. Next: retention
-  windows + a checkpoint-aware purge (see `docs/auditforge-strategy.md`).
+  tenant — a real-Postgres test proves an edit to a stored row is caught. **Retention** is
+  built too: `Service.Retention` + `Service.Purge` (operator-only, not an HTTP route) remove
+  the leading run of records older than the window and write a **signed `chain.Checkpoint`**
+  (`{length, hash, through}`) so the surviving tail still verifies from the checkpoint hash;
+  `VerifyChain` rejects a forged checkpoint. Real-Postgres tests cover purge, tail
+  verification, post-purge appends, and checkpoint tampering. This closes Phase D (v1);
+  post-v1 is Ed25519 detached signatures over the same canonical form.
 
 Most `docs/` and `core/hooks/` files are still empty placeholders.
 

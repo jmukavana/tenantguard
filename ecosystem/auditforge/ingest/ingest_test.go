@@ -43,8 +43,10 @@ func goldenEvents(t *testing.T) ([]byte, []audit.Event) {
 	return []byte(fixture.Secret), events
 }
 
+var checkpointSecret = []byte("auditforge-checkpoint-key")
+
 func service(secret []byte) Service {
-	return Service{Keys: keyring.Map{"k1": secret}, Store: store.NewMemory()}
+	return Service{Keys: keyring.Map{"k1": secret}, Store: store.NewMemory(checkpointSecret)}
 }
 
 func TestIngestAcceptsGoldenVectors(t *testing.T) {
@@ -98,7 +100,7 @@ func TestIngestRejectsTamperedEvent(t *testing.T) {
 
 func TestIngestRejectsUnknownKey(t *testing.T) {
 	_, events := goldenEvents(t)
-	svc := Service{Keys: keyring.Map{}, Store: store.NewMemory()}
+	svc := Service{Keys: keyring.Map{}, Store: store.NewMemory(checkpointSecret)}
 
 	ack, err := svc.Ingest(context.Background(), IngestRequest{KeyID: "unregistered", Events: events})
 	if err != nil {

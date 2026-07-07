@@ -67,7 +67,7 @@ The service lives in its own module, `github.com/tenantguard/auditforge` under
   resolves tenant B's events. The service composes over any `Store`, so `cmd/auditforged` can
   swap `Memory` for `Postgres` unchanged.
 
-### Phase D — Tamper-evidence & retention
+### Phase D — Tamper-evidence & retention — done (v1 scope)
 - **Hash chaining — done.** The `chain` package computes
   `hash = lowercasehex(SHA-256(prevHash ‖ canonicalForm))` (genesis `prevHash = ""`), anchored
   to golden vectors derived from the signing fixtures. Both stores link each new record and
@@ -75,10 +75,14 @@ The service lives in its own module, `github.com/tenantguard/auditforge` under
   table lock so appends can't fork the chain. `GET /v1/events/chain` returns an intact/broken
   report for the caller's tenant. A real-Postgres test proves an edit to a stored row is
   detected (`brokenAt` the tampered eventId).
-- **Retention — next.** Configurable minimum retention windows and a guarded purge. Note the
-  tension with chaining: purging old records truncates the replayable chain, so purge needs a
-  signed checkpoint (store the head hash + length at the cut) so the surviving tail still
-  verifies. Design this before implementing.
+- **Retention — done.** `Service.Retention` sets a minimum window; `Service.Purge` (an
+  operator/scheduler call, never an HTTP route) removes the leading run of records older than
+  it. Both stores implement `Purge`, writing a signed `chain.Checkpoint` (`{length, hash,
+  through}`, HMAC-signed) at the cut; `VerifyChain` replays the surviving tail from the
+  checkpoint hash and rejects a forged checkpoint. The Postgres purge runs under the same
+  `EXCLUSIVE` lock as append and persists the checkpoint in a per-tenant `chain_checkpoint`
+  table. Real-Postgres tests prove old records are removed, the tail still verifies, appends
+  keep extending the chain, and tampering with the checkpoint row is caught.
 - **Post-v1:** Ed25519 detached signatures (same canonical form, asymmetric algorithm) for
   non-repudiation.
 

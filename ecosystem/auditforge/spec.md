@@ -87,7 +87,14 @@ only when `intact` is false and names the first inconsistent record.
   running head and its recomputed `hash` matches the stored `hash`. Any edit, insertion, or
   deletion surfaces as the first record whose links no longer line up.
 - **Retention.** Configurable minimum retention per regulator; deletion before expiry is
-  prohibited.
+  prohibited. Purging removes only the leading run of records older than the window (records
+  younger than it, and any older record sitting behind one, are kept), so the survivors remain
+  a contiguous chain suffix. Each purge writes a **signed checkpoint** — `{length, hash,
+  through}` HMAC-signed with an AuditForge key — recording how many records were removed and
+  the chain head at the cut. Verification then replays the surviving tail from the checkpoint
+  hash instead of genesis; the checkpoint's own signature prevents an attacker with database
+  access from forging a shorter history to hide a deletion. Deletion is an operator/scheduler
+  operation, never exposed over the ingest API.
 
 ## Security requirements
 
